@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum TicketOrderStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  INVALID
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum VideoSource {
+  UPLOAD
+  EXTERNAL
+}
+
+model ManagementUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ArtistProfile {
+  id           String   @id @default(cuid())
+  name         String
+  tagline      String?
+  bio          String?
+  heroImage    String?
+  heroVideo    String?
+  profileImage String?
+  updatedAt    DateTime @updatedAt
+}
+
+model Album {
+  id          String   @id @default(cuid())
+  title       String
+  artworkUrl  String
+  releaseDate DateTime
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  songs Song[]
+}
+
+model Song {
+  id          String   @id @default(cuid())
+  title       String
+  audioUrl    String
+  artworkUrl  String?
+  releaseDate DateTime
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  albumId String?
+  album   Album? @relation(fields: [albumId], references: [id], onDelete: SetNull)
+
+  @@index([albumId])
+  @@index([releaseDate])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  description String?
+  posterUrl   String?
+  cancelled   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  info        EventInfo[]
+  ticketTypes TicketType[]
+  orders      TicketOrder[]
+
+  @@index([date])
+}
+
+model EventInfo {
+  id        String @id @default(cuid())
+  label     String
+  value     String
+  sortOrder Int    @default(0)
+
+  eventId String
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+model TicketType {
+  id        String   @id @default(cuid())
+  name      String
+  price     Float
+  quantity  Int?
+  unlimited Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  eventId String
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  tickets Ticket[]
+}
+
+model TicketOrder {
+  id           String            @id @default(cuid())
+  customerName String
+  phone        String
+  email        String?
+  quantity     Int
+  status       TicketOrderStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  eventId String
+  event   Event @relation(fields: [eventId], references: [id])
+
+  tickets Ticket[]
+}
+
+model Ticket {
+  id         String       @id @default(cuid())
+  ticketCode String       @unique
+  qrToken    String       @unique
+  status     TicketStatus @default(VALID)
+  createdAt  DateTime     @default(now())
+
+  orderId String
+  order   TicketOrder @relation(fields: [orderId], references: [id])
+
+  ticketTypeId String
+  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+
+  @@index([qrToken])
+}
+
+model BookingService {
+  id        String  @id @default(cuid())
+  name      String
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  bookings Booking[]
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  eventDate DateTime
+  location  String
+  details   String?
+  status    BookingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  serviceId String
+  service   BookingService @relation(fields: [serviceId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model GalleryCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  items GalleryItem[]
+}
+
+model GalleryItem {
+  id           String    @id @default(cuid())
+  type         MediaType
+  url          String
+  thumbnailUrl String?
+  title        String?
+  createdAt    DateTime  @default(now())
+
+  categoryId String
+  category   GalleryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+}
+
+model Video {
+  id           String      @id @default(cuid())
+  title        String
+  thumbnailUrl String
+  source       VideoSource
+  videoUrl     String
+  createdAt    DateTime    @default(now())
+}
+
+model SocialLink {
+  id        String @id @default(cuid())
+  platform  String
+  url       String
+  sortOrder Int    @default(0)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  message   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  @@index([createdAt])
+}
+
+model SiteSettings {
+  id              String   @id @default(cuid())
+  bookingEmail    String?
+  bookingWhatsapp String?
+  contactEmail    String?
+  contactPhone    String?
+  updatedAt       DateTime @updatedAt
+}
