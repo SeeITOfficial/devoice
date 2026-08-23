@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --teal-950: #073b3a;
+  --teal-900: #0a4a48;
+  --teal-800: #0d5c59;
+  --teal-700: #14706c;
+  --teal-600: #21847e;
+  --teal-500: #3a9991;
+  --teal-200: #b8d8d3;
+  --teal-100: #dcebe7;
+
+  --off-white: #f7f5ef;
+  --warm-white: #fffdf8;
+  --text: #123c3a;
+  --muted: #607a77;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--off-white);
+  color: var(--text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+@font-face {
+  font-family: "Brittany Signature";
+  src: url("/fonts/BrittanySignature.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }

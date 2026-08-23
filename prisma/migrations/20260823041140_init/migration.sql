@@ -24,6 +24,7 @@ CREATE TABLE "Album" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "title" TEXT NOT NULL,
     "artworkUrl" TEXT NOT NULL,
+
     "releaseDate" DATETIME NOT NULL,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
