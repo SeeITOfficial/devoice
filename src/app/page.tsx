@@ -4,6 +4,7 @@ import FeaturedEvents from "@/components/home/FeaturedEvents";
 import AboutPreview from "@/components/home/AboutPreview";
 import FeaturedVideos from "@/components/home/FeaturedVideos";
 import GalleryPreview from "@/components/home/GalleryPreview";
+import BookingCTA from "@/components/home/BookingCTA";
 
 export default function Home() {
   return (
@@ -23,6 +24,8 @@ export default function Home() {
       <FeaturedVideos />
 
       <GalleryPreview />
+
+      <BookingCTA />
     </main>
   );
 }
