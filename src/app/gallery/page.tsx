@@ -1,101 +1,120 @@
-const galleryItems = [
-  {
-    title: "De Voice",
-    category: "Portraits",
-    image: "/hero.jpeg",
-    size: "large",
-  },
-  {
-    title: "On Stage",
-    category: "Performance",
-    image: "/hero.jpeg",
-    size: "normal",
-  },
-  {
-    title: "The Artist",
-    category: "Portraits",
-    image: "/hero.jpeg",
-    size: "normal",
-  },
-  {
-    title: "Behind the Music",
-    category: "Behind the Scenes",
-    image: "/hero.jpeg",
-    size: "normal",
-  },
-  {
-    title: "Da Diva",
-    category: "Portraits",
-    image: "/hero.jpeg",
-    size: "normal",
-  },
-];
+import { prisma } from "@/lib/prisma";
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
+  const categories = await prisma.galleryCategory.findMany({
+    orderBy: {
+      createdAt: "asc",
+    },
+    include: {
+      items: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+    },
+  });
+
   return (
-    <main className="bg-[#f2e9d8] text-[#0d1a17]">
+    <main className="min-h-screen bg-[#f2e9d8] text-[#0d1a17]">
       {/* Header */}
-      <section className="px-6 pb-20 pt-28 sm:px-10 lg:px-20">
+      <section className="px-6 pb-16 pt-24 sm:px-10 lg:px-20">
         <div className="mx-auto max-w-[1440px]">
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.4em] text-[#b18a3b]">
-            Visuals
+          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#b18a3b]">
+            Behind the voice
           </p>
 
-          <h1 className="font-serif text-6xl leading-[0.9] tracking-tight sm:text-7xl lg:text-9xl">
-            The
-            <br />
+          <h1 className="mt-5 font-serif text-6xl leading-[0.9] sm:text-7xl lg:text-8xl">
             Gallery
           </h1>
 
-          <p className="mt-8 max-w-xl text-base leading-7 text-[#0d1a17]/60 sm:text-lg">
-            Portraits, performances and moments from the world of De Voice.
+          <p className="mt-7 max-w-2xl text-base leading-7 text-[#0d1a17]/60 sm:text-lg">
+            Moments from the music, the stage and the journey of De Voice.
           </p>
         </div>
       </section>
 
       {/* Gallery */}
       <section className="px-6 pb-24 sm:px-10 lg:px-20">
-        <div className="mx-auto grid max-w-[1440px] gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {galleryItems.map((item, index) => (
-            <article
-              key={`${item.title}-${index}`}
-              className={`group relative overflow-hidden rounded-[1.5rem] bg-[#16241f] ${
-                index === 0
-                  ? "min-h-[620px] sm:col-span-2 lg:col-span-2 lg:row-span-2"
-                  : "min-h-[300px]"
-              }`}
-            >
-              <img
-                src={item.image}
-                alt={item.title}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
+        <div className="mx-auto max-w-[1440px]">
+          {categories.length === 0 ? (
+            <div className="rounded-[2rem] border border-[#0d1a17]/10 bg-white/40 px-6 py-20 text-center">
+              <p className="font-serif text-4xl">
+                The gallery is coming.
+              </p>
 
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0d1a17]/85 via-transparent to-transparent" />
+              <p className="mt-4 text-sm text-[#0d1a17]/50">
+                Photos and videos from De Voice will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-20">
+              {categories.map((category) => (
+                <section key={category.id}>
+                  {/* Category heading */}
+                  <div className="mb-8 flex items-end justify-between gap-6">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#b18a3b]">
+                        Collection
+                      </p>
 
-              <div className="absolute bottom-0 left-0 right-0 p-7">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-[#c9a24b]">
-                  {item.category}
-                </p>
+                      <h2 className="mt-2 font-serif text-4xl sm:text-5xl">
+                        {category.name}
+                      </h2>
+                    </div>
 
-                <h2 className="mt-2 font-serif text-3xl text-[#f2e9d8]">
-                  {item.title}
-                </h2>
-              </div>
-            </article>
-          ))}
+                    <span className="hidden text-xs text-[#0d1a17]/35 sm:block">
+                      {category.items.length}{" "}
+                      {category.items.length === 1 ? "item" : "items"}
+                    </span>
+                  </div>
+
+                  {category.items.length === 0 ? (
+                    <div className="rounded-[1.5rem] border border-dashed border-[#0d1a17]/15 px-6 py-12 text-center">
+                      <p className="text-sm text-[#0d1a17]/40">
+                        No media in this collection yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
+                      {category.items.map((item) => (
+                        <article
+                          key={item.id}
+                          className="mb-5 break-inside-avoid overflow-hidden rounded-[1.5rem] bg-[#16241f]"
+                        >
+                          <div className="relative">
+                            {item.type === "IMAGE" ? (
+                              <img
+                                src={item.url}
+                                alt={item.title ?? category.name}
+                                className="block h-auto w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
+                              />
+                            ) : (
+                              <video
+                                src={item.url}
+                                poster={item.thumbnailUrl ?? undefined}
+                                controls
+                                preload="metadata"
+                                className="block w-full"
+                              />
+                            )}
+
+                            {item.title && (
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-5 pb-5 pt-12">
+                                <p className="text-sm font-medium text-white">
+                                  {item.title}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
         </div>
-      </section>
-
-      {/* Closing */}
-      <section className="bg-[#0d1a17] px-6 py-24 text-center text-[#f2e9d8] sm:px-10">
-        <p className="text-xs uppercase tracking-[0.35em] text-[#c9a24b]">
-          De Voice
-        </p>
-
-        <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-tight sm:text-5xl">
-          Every moment tells part of the story.
-        </h2>
       </section>
     </main>
   );
