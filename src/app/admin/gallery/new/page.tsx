@@ -2,17 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import MediaUploader from "@/components/admin/MediaUploader";
 
 type Category = {
   id: string;
   name: string;
 };
 
+type MediaMode = "UPLOAD" | "EXTERNAL";
+
 export default function NewGalleryItemPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [type, setType] = useState<"IMAGE" | "VIDEO">("IMAGE");
+  const [mediaMode, setMediaMode] =
+    useState<MediaMode>("UPLOAD");
+
+  const [url, setUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [categoryId, setCategoryId] = useState("");
 
   useEffect(() => {
     async function loadCategories() {
@@ -44,6 +56,15 @@ export default function NewGalleryItemPage() {
     loadCategories();
   }, []);
 
+  function handleTypeChange(
+    nextType: "IMAGE" | "VIDEO"
+  ) {
+    setType(nextType);
+    setUrl("");
+    setThumbnailUrl("");
+    setMediaMode("UPLOAD");
+  }
+
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -52,8 +73,17 @@ export default function NewGalleryItemPage() {
     setLoading(true);
     setError("");
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    if (!categoryId) {
+      setError("Please select a gallery category.");
+      setLoading(false);
+      return;
+    }
+
+    if (!url.trim()) {
+      setError("Please upload or provide a media URL.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/admin/gallery", {
@@ -62,11 +92,12 @@ export default function NewGalleryItemPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: formData.get("type"),
-          url: formData.get("url"),
-          thumbnailUrl: formData.get("thumbnailUrl"),
-          title: formData.get("title"),
-          categoryId: formData.get("categoryId"),
+          type,
+          url: url.trim(),
+          thumbnailUrl:
+            thumbnailUrl.trim() || null,
+          title: title.trim() || null,
+          categoryId,
         }),
       });
 
@@ -100,146 +131,267 @@ export default function NewGalleryItemPage() {
           ← Back to Gallery
         </Link>
 
-        <p className="mt-12 text-xs font-semibold uppercase tracking-[0.4em] text-[#b18a3b]">
-          Gallery Management
-        </p>
+        <div className="mt-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#b18a3b]">
+            Management
+          </p>
 
-        <h1 className="mt-4 font-serif text-6xl leading-none">
-          Add Media
-        </h1>
+          <h1 className="mt-4 font-serif text-6xl leading-none">
+            Add Media
+          </h1>
+
+          <p className="mt-5 max-w-xl text-sm leading-6 text-[#0d1a17]/50">
+            Add photographs or video to the public gallery.
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-12 space-y-6 rounded-[2rem] bg-white/50 p-7 sm:p-10"
+          className="mt-12 space-y-8"
         >
+          {/* Media type */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-              Media type
-            </p>
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em]">
+              Media Type
+            </label>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="IMAGE"
-                  defaultChecked
-                  className="peer sr-only"
-                />
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleTypeChange("IMAGE")}
+                className={`rounded-2xl px-5 py-4 text-xs font-bold uppercase tracking-[0.12em] transition-colors ${
+                  type === "IMAGE"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15 bg-white/40"
+                }`}
+              >
+                Image
+              </button>
 
-                <span className="block rounded-xl border border-[#0d1a17]/10 px-5 py-4 text-center text-sm peer-checked:border-[#c9a24b] peer-checked:bg-[#c9a24b]/10">
-                  Image
-                </span>
-              </label>
-
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="VIDEO"
-                  className="peer sr-only"
-                />
-
-                <span className="block rounded-xl border border-[#0d1a17]/10 px-5 py-4 text-center text-sm peer-checked:border-[#c9a24b] peer-checked:bg-[#c9a24b]/10">
-                  Video
-                </span>
-              </label>
+              <button
+                type="button"
+                onClick={() => handleTypeChange("VIDEO")}
+                className={`rounded-2xl px-5 py-4 text-xs font-bold uppercase tracking-[0.12em] transition-colors ${
+                  type === "VIDEO"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15 bg-white/40"
+                }`}
+              >
+                Video
+              </button>
             </div>
           </div>
 
+          {/* Upload / external */}
           <div>
-            <label
-              htmlFor="categoryId"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
-            >
-              Category
-            </label>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setMediaMode("UPLOAD");
+                  setUrl("");
+                }}
+                className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                  mediaMode === "UPLOAD"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15"
+                }`}
+              >
+                Upload from Device
+              </button>
 
-            <select
-              id="categoryId"
-              name="categoryId"
-              required
-              disabled={loadingCategories || categories.length === 0}
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            >
-              <option value="">
-                {loadingCategories
-                  ? "Loading categories..."
-                  : categories.length === 0
-                    ? "Create a category first"
-                    : "Select category"}
-              </option>
+              <button
+                type="button"
+                onClick={() => {
+                  setMediaMode("EXTERNAL");
+                  setUrl("");
+                }}
+                className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                  mediaMode === "EXTERNAL"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15"
+                }`}
+              >
+                External URL
+              </button>
+            </div>
 
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            <div className="mt-5">
+              {mediaMode === "UPLOAD" ? (
+                <MediaUploader
+                  mediaType={
+                    type === "IMAGE"
+                      ? "image"
+                      : "video"
+                  }
+                  onUploadComplete={(uploadedUrl) => {
+                    setUrl(uploadedUrl);
+                  }}
+                  label={
+                    type === "IMAGE"
+                      ? "Choose image from device"
+                      : "Choose video from device"
+                  }
+                />
+              ) : (
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                    {type === "VIDEO"
+                      ? "YouTube / Vimeo / Video URL"
+                      : "Image URL"}
+                  </label>
+
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(event) =>
+                      setUrl(event.target.value)
+                    }
+                    placeholder={
+                      type === "VIDEO"
+                        ? "https://youtube.com/..."
+                        : "https://..."
+                    }
+                    className="mt-3 w-full rounded-2xl border border-[#0d1a17]/15 bg-white/50 px-5 py-4 text-sm outline-none transition-colors focus:border-[#c9a24b]"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Thumbnail */}
+          {type === "VIDEO" && (
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                Thumbnail
+              </label>
+
+              <div className="mt-4">
+                <MediaUploader
+                  mediaType="image"
+                  onUploadComplete={(uploadedUrl) => {
+                    setThumbnailUrl(uploadedUrl);
+                  }}
+                  label="Choose thumbnail"
+                />
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-[#0d1a17]/35">
+                  Or use a thumbnail URL
+                </p>
+
+                <input
+                  type="url"
+                  value={thumbnailUrl}
+                  onChange={(event) =>
+                    setThumbnailUrl(event.target.value)
+                  }
+                  placeholder="https://..."
+                  className="w-full rounded-2xl border border-[#0d1a17]/15 bg-white/50 px-5 py-4 text-sm outline-none transition-colors focus:border-[#c9a24b]"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Title */}
           <div>
             <label
               htmlFor="title"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
+              className="text-[10px] font-bold uppercase tracking-[0.2em]"
             >
               Title
             </label>
 
             <input
               id="title"
-              name="title"
-              placeholder="Live at Gabriel Ba Collections"
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+              type="text"
+              value={title}
+              onChange={(event) =>
+                setTitle(event.target.value)
+              }
+              placeholder="e.g. Behind the Music"
+              className="mt-3 w-full rounded-2xl border border-[#0d1a17]/15 bg-white/50 px-5 py-4 text-sm outline-none transition-colors focus:border-[#c9a24b]"
             />
           </div>
 
+          {/* Category */}
           <div>
             <label
-              htmlFor="url"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
+              htmlFor="categoryId"
+              className="text-[10px] font-bold uppercase tracking-[0.2em]"
             >
-              Media URL
+              Category
             </label>
 
-            <input
-              id="url"
-              name="url"
-              required
-              placeholder="/gallery/performance-01.jpg"
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="thumbnailUrl"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
+            <select
+              id="categoryId"
+              value={categoryId}
+              onChange={(event) =>
+                setCategoryId(event.target.value)
+              }
+              disabled={loadingCategories}
+              className="mt-3 w-full rounded-2xl border border-[#0d1a17]/15 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
             >
-              Thumbnail URL
-            </label>
+              <option value="">
+                {loadingCategories
+                  ? "Loading categories..."
+                  : "Select a category"}
+              </option>
 
-            <input
-              id="thumbnailUrl"
-              name="thumbnailUrl"
-              placeholder="Optional"
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            />
+              {categories.map((category) => (
+                <option
+                  key={category.id}
+                  value={category.id}
+                >
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
 
+          {/* Uploaded URL indicator */}
+          {url && (
+            <div className="rounded-2xl bg-[#0d1a17] p-5 text-[#f2e9d8]">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#c9a24b]">
+                Media ready
+              </p>
+
+              <p className="mt-2 break-all text-xs text-[#f2e9d8]/60">
+                {url}
+              </p>
+            </div>
+          )}
+
+          {/* Error */}
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-700">
+            <div className="rounded-2xl border border-red-900/20 bg-red-50 px-5 py-4 text-sm text-red-900">
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || categories.length === 0}
-            className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Adding Media..." : "Add Media"}
-          </button>
+          {/* Submit */}
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href="/admin/gallery"
+              className="rounded-full border border-[#0d1a17]/15 px-7 py-4 text-xs font-bold uppercase tracking-[0.12em]"
+            >
+              Cancel
+            </Link>
+
+            <button
+              type="submit"
+              disabled={
+                loading ||
+                loadingCategories ||
+                !url ||
+                !categoryId
+              }
+              className="rounded-full bg-[#0d1a17] px-7 py-4 text-xs font-bold uppercase tracking-[0.12em] text-[#f2e9d8] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {loading ? "Saving..." : "Add Media"}
+            </button>
+          </div>
         </form>
       </div>
     </main>

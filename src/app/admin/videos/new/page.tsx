@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import MediaUploader from "@/components/admin/MediaUploader";
+
+type VideoMode = "UPLOAD" | "EXTERNAL";
 
 export default function NewVideoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [videoMode, setVideoMode] =
+    useState<VideoMode>("UPLOAD");
+
+  const [videoUrl, setVideoUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
@@ -18,6 +27,20 @@ export default function NewVideoPage() {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    if (!videoUrl.trim()) {
+      setError(
+        "Please upload a video or provide an external video URL."
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (!thumbnailUrl.trim()) {
+      setError("Please add a video thumbnail.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/admin/videos", {
         method: "POST",
@@ -26,9 +49,9 @@ export default function NewVideoPage() {
         },
         body: JSON.stringify({
           title: formData.get("title"),
-          thumbnailUrl: formData.get("thumbnailUrl"),
-          source: formData.get("source"),
-          videoUrl: formData.get("videoUrl"),
+          thumbnailUrl: thumbnailUrl.trim(),
+          source: videoMode,
+          videoUrl: videoUrl.trim(),
         }),
       });
 
@@ -70,9 +93,14 @@ export default function NewVideoPage() {
           New Video
         </h1>
 
+        <p className="mt-5 max-w-xl text-sm leading-6 text-[#0d1a17]/50">
+          Add an uploaded performance, music video, interview
+          or external video.
+        </p>
+
         <form
           onSubmit={handleSubmit}
-          className="mt-12 space-y-6 rounded-[2rem] bg-white/50 p-7 sm:p-10"
+          className="mt-12 space-y-8 rounded-[2rem] bg-white/50 p-7 sm:p-10"
         >
           {/* Title */}
           <div>
@@ -87,98 +115,162 @@ export default function NewVideoPage() {
               id="title"
               name="title"
               required
-              placeholder="De Voice — Live Performance"
+              placeholder="Nankinga — Official Music Video"
               className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
             />
           </div>
 
-          {/* Source */}
+          {/* Video source */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
               Video source
-            </p>
-
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="source"
-                  value="EXTERNAL"
-                  defaultChecked
-                  className="peer sr-only"
-                />
-
-                <span className="block rounded-xl border border-[#0d1a17]/10 px-5 py-4 text-center text-sm peer-checked:border-[#c9a24b] peer-checked:bg-[#c9a24b]/10">
-                  External
-                </span>
-              </label>
-
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="source"
-                  value="UPLOAD"
-                  className="peer sr-only"
-                />
-
-                <span className="block rounded-xl border border-[#0d1a17]/10 px-5 py-4 text-center text-sm peer-checked:border-[#c9a24b] peer-checked:bg-[#c9a24b]/10">
-                  Upload
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Video URL */}
-          <div>
-            <label
-              htmlFor="videoUrl"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
-            >
-              Video URL
             </label>
 
-            <input
-              id="videoUrl"
-              name="videoUrl"
-              required
-              placeholder="https://www.youtube.com/watch?v=..."
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            />
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoMode("UPLOAD");
+                  setVideoUrl("");
+                }}
+                className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                  videoMode === "UPLOAD"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15"
+                }`}
+              >
+                Upload from Device
+              </button>
 
-            <p className="mt-2 text-[10px] text-[#0d1a17]/35">
-              For external videos, paste the YouTube, Vimeo or other video
-              URL.
-            </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoMode("EXTERNAL");
+                  setVideoUrl("");
+                }}
+                className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                  videoMode === "EXTERNAL"
+                    ? "bg-[#0d1a17] text-[#f2e9d8]"
+                    : "border border-[#0d1a17]/15"
+                }`}
+              >
+                YouTube / Vimeo / URL
+              </button>
+            </div>
+
+            <div className="mt-5">
+              {videoMode === "UPLOAD" ? (
+                <MediaUploader
+                  mediaType="video"
+                  onUploadComplete={(url) => {
+                    setVideoUrl(url);
+                  }}
+                  label="Choose video from device"
+                  accept="video/mp4,video/webm,video/quicktime"
+                />
+              ) : (
+                <div>
+                  <p className="mb-3 text-xs leading-5 text-[#0d1a17]/45">
+                    Paste the video URL. YouTube and Vimeo
+                    links can be stored here for externally
+                    hosted videos.
+                  </p>
+
+                  <input
+                    type="url"
+                    value={videoUrl}
+                    onChange={(event) =>
+                      setVideoUrl(event.target.value)
+                    }
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Thumbnail */}
           <div>
-            <label
-              htmlFor="thumbnailUrl"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
-            >
-              Thumbnail URL
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+              Thumbnail
             </label>
 
-            <input
-              id="thumbnailUrl"
-              name="thumbnailUrl"
-              required
-              placeholder="/videos/live-performance.jpg"
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            />
+            <p className="mt-2 text-xs leading-5 text-[#0d1a17]/45">
+              Upload a lightweight image that will appear
+              before the video loads.
+            </p>
+
+            <div className="mt-5">
+              <MediaUploader
+                mediaType="image"
+                onUploadComplete={(url) => {
+                  setThumbnailUrl(url);
+                }}
+                label="Choose thumbnail from device"
+                accept="image/*"
+              />
+            </div>
+
+            <div className="mt-5">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-[#0d1a17]/35">
+                Or use thumbnail URL
+              </p>
+
+              <input
+                type="url"
+                value={thumbnailUrl}
+                onChange={(event) =>
+                  setThumbnailUrl(event.target.value)
+                }
+                placeholder="https://..."
+                className="w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+              />
+            </div>
           </div>
 
+          {/* Video ready */}
+          {videoUrl && (
+            <div className="rounded-xl bg-[#0d1a17] p-5 text-[#f2e9d8]">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#c9a24b]">
+                Video ready
+              </p>
+
+              <p className="mt-2 break-all text-xs text-[#f2e9d8]/60">
+                {videoUrl}
+              </p>
+            </div>
+          )}
+
+          {/* Thumbnail ready */}
+          {thumbnailUrl && (
+            <div className="rounded-xl border border-[#0d1a17]/10 bg-white/50 p-5">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#b18a3b]">
+                Thumbnail ready
+              </p>
+
+              <p className="mt-2 break-all text-xs text-[#0d1a17]/45">
+                {thumbnailUrl}
+              </p>
+            </div>
+          )}
+
+          {/* Error */}
           {error && (
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-700">
               {error}
             </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={
+              loading ||
+              !videoUrl ||
+              !thumbnailUrl
+            }
+            className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Creating Video..." : "Create Video"}
           </button>

@@ -1,5 +1,23 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+
+function isValidImageUrl(url: string | null | undefined) {
+  if (!url || !url.trim()) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    return (
+      parsed.protocol === "http:" ||
+      parsed.protocol === "https:"
+    );
+  } catch {
+    return false;
+  }
+}
 
 export default async function FeaturedMusic() {
   const album = await prisma.album.findFirst({
@@ -24,7 +42,6 @@ export default async function FeaturedMusic() {
   return (
     <section className="relative overflow-hidden bg-[#f2e9d8] px-6 py-24 text-[#0d1a17] sm:px-10 lg:px-20">
       <div className="mx-auto max-w-[1440px]">
-        {/* Section heading */}
         <div className="mb-16 flex flex-col justify-between gap-8 md:flex-row md:items-end">
           <div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.4em] text-[#b18a3b]">
@@ -65,11 +82,14 @@ export default async function FeaturedMusic() {
           <div className="grid overflow-hidden rounded-[2rem] bg-[#0d1a17] lg:grid-cols-[0.9fr_1.1fr]">
             {/* Album artwork */}
             <div className="relative aspect-square min-h-[360px] overflow-hidden bg-[#16241f] lg:aspect-auto lg:min-h-[620px]">
-              {album.artworkUrl ? (
-                <img
+              {isValidImageUrl(album.artworkUrl) ? (
+                <Image
                   src={album.artworkUrl}
                   alt={album.title}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 45vw"
+                  className="object-cover"
+                  priority
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -94,7 +114,6 @@ export default async function FeaturedMusic() {
                 </div>
               )}
 
-              {/* Vintage glow */}
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,162,75,0.14),transparent_55%)]" />
 
               <div className="absolute bottom-8 left-8 text-[10px] uppercase tracking-[0.35em] text-[#f2e9d8]/40">
