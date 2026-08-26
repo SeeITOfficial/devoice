@@ -10,6 +10,7 @@ export async function GET(
 
     const event = await prisma.event.findUnique({
       where: { id },
+      include: { ticketTypes: true },
     });
 
     if (!event) {
@@ -47,6 +48,10 @@ export async function PATCH(
       description?: string | null;
       posterUrl?: string | null;
       cancelled?: boolean;
+      ticketName?: string;
+      ticketPrice?: string | number | null;
+      ticketQuantity?: string | number | null;
+      ticketUnlimited?: boolean;
     } = {};
 
     if (body.title !== undefined) {
@@ -85,9 +90,44 @@ export async function PATCH(
       data.cancelled = Boolean(body.cancelled);
     }
 
-    const event = await prisma.event.update({
-      where: { id },
-      data,
+    const event = await prisma.$transaction(async (transaction) => {
+      const updatedEvent = await transaction.event.update({
+        where: { id },
+        data,
+      });
+
+      if (body.ticketName) {
+        const ticketData = {
+          name: body.ticketName.trim(),
+          price: Number(body.ticketPrice),
+          quantity: body.ticketUnlimited
+            ? null
+            : Number(body.ticketQuantity),
+          unlimited: Boolean(body.ticketUnlimited),
+        };
+        const ticketType = await transaction.ticketType.findFirst({
+          where: { eventId: id },
+        });
+
+        if (ticketType) {
+          await transaction.ticketType.update({
+            where: { id: ticketType.id },
+            data: ticketData,
+          });
+        } else {
+          await transaction.ticketType.create({
+            data: {
+              ...ticketData,
+              eventId: id,
+            },
+          });
+        }
+      }
+
+      return transaction.event.findUnique({
+        where: { id: updatedEvent.id },
+        include: { ticketTypes: true },
+      });
     });
 
     return NextResponse.json({

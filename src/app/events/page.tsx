@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
@@ -135,10 +136,12 @@ function EventCard({
         {/* Poster */}
         <div className="relative aspect-[4/3] bg-[#16241f] md:aspect-auto">
           {event.posterUrl ? (
-            <img
+            <Image
               src={event.posterUrl}
               alt={event.title}
-              className="absolute inset-0 h-full w-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 320px"
+              className="object-cover"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

@@ -1,5 +1,6 @@
-import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import AudioPlayer from "@/components/music/AudioPlayer";
 
 export default async function MusicPage() {
   const albums = await prisma.album.findMany({
@@ -84,10 +85,12 @@ export default async function MusicPage() {
                     {/* Artwork */}
                     <div className="relative aspect-square overflow-hidden bg-[#16241f] md:aspect-auto">
                       {album.artworkUrl ? (
-                        <img
+                        <Image
                           src={album.artworkUrl}
                           alt={album.title}
-                          className="absolute inset-0 h-full w-full object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 360px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -122,25 +125,26 @@ export default async function MusicPage() {
                           {album.songs.map((song, index) => (
                             <div
                               key={song.id}
-                              className="flex items-center gap-4 border-b border-[#f2e9d8]/10 py-5"
+                              className="border-b border-[#f2e9d8]/10 py-5"
                             >
-                              <span className="w-6 text-xs text-[#c9a24b]">
-                                {String(index + 1).padStart(2, "0")}
-                              </span>
+                              <div className="flex items-center gap-4">
+                                <span className="w-6 shrink-0 text-xs text-[#c9a24b]">
+                                  {String(index + 1).padStart(2, "0")}
+                                </span>
 
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">
-                                  {song.title}
-                                </p>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">
+                                    {song.title}
+                                  </p>
+                                </div>
                               </div>
 
-                              <Link
-                                href={`/music/${song.id}`}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#c9a24b]/40 text-[#c9a24b] transition-colors hover:bg-[#c9a24b] hover:text-[#0d1a17]"
-                                aria-label={`Play ${song.title}`}
-                              >
-                                ▶
-                              </Link>
+                              <div className="mt-4 pl-10">
+                                <AudioPlayer
+                                  audioUrl={song.audioUrl}
+                                  title={song.title}
+                                />
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -172,49 +176,52 @@ export default async function MusicPage() {
               {songs.map((song, index) => (
                 <div
                   key={song.id}
-                  className="flex items-center gap-5 border-b border-[#0d1a17]/10 px-6 py-5 last:border-0 sm:px-8"
+                  className="border-b border-[#0d1a17]/10 px-6 py-5 last:border-0 sm:px-8"
                 >
-                  <span className="w-8 text-xs text-[#b18a3b]">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
+                  <div className="flex items-center gap-5">
+                    <span className="w-8 shrink-0 text-xs text-[#b18a3b]">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
 
-                  {song.artworkUrl && (
-                    <img
-                      src={song.artworkUrl}
-                      alt=""
-                      className="h-12 w-12 rounded-lg object-cover"
-                    />
-                  )}
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {song.title}
-                    </p>
-
-                    {song.album && (
-                      <p className="mt-1 truncate text-xs text-[#0d1a17]/40">
-                        {song.album.title}
-                      </p>
+                    {song.artworkUrl && (
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
+                        <Image
+                          src={song.artworkUrl}
+                          alt=""
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      </div>
                     )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {song.title}
+                      </p>
+
+                      {song.album && (
+                        <p className="mt-1 truncate text-xs text-[#0d1a17]/40">
+                          {song.album.title}
+                        </p>
+                      )}
+                    </div>
+
+                    <span className="hidden shrink-0 text-xs text-[#0d1a17]/35 sm:block">
+                      {new Intl.DateTimeFormat("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      }).format(song.releaseDate)}
+                    </span>
                   </div>
 
-                  <span className="hidden text-xs text-[#0d1a17]/35 sm:block">
-                    {new Intl.DateTimeFormat("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    }).format(song.releaseDate)}
-                  </span>
-
-                  <a
-                    href={song.audioUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0d1a17] text-xs text-[#f2e9d8] transition-transform hover:scale-105"
-                    aria-label={`Listen to ${song.title}`}
-                  >
-                    ▶
-                  </a>
+                  <div className="mt-4 pl-13">
+                    <AudioPlayer
+                      audioUrl={song.audioUrl}
+                      title={song.title}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

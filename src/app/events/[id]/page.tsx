@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -43,10 +44,13 @@ export default async function EventDetailsPage({ params }: Props) {
           {/* Poster */}
           <div className="relative min-h-[50vh] md:min-h-[70vh]">
             {event.posterUrl ? (
-              <img
+              <Image
                 src={event.posterUrl}
                 alt={event.title}
-                className="absolute inset-0 h-full w-full object-cover"
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-[#16241f]">

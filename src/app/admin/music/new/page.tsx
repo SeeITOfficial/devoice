@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import MediaUploader from "@/components/admin/MediaUploader";
 
 export default function NewAlbumPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [artworkUrl, setArtworkUrl] = useState("");
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
@@ -18,6 +20,12 @@ export default function NewAlbumPage() {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    if (!artworkUrl.trim()) {
+      setError("Please upload album artwork.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/admin/albums", {
         method: "POST",
@@ -26,7 +34,7 @@ export default function NewAlbumPage() {
         },
         body: JSON.stringify({
           title: formData.get("title"),
-          artworkUrl: formData.get("artworkUrl"),
+          artworkUrl: artworkUrl.trim(),
           releaseDate: formData.get("releaseDate"),
           published: formData.get("published") === "on",
         }),
@@ -70,10 +78,16 @@ export default function NewAlbumPage() {
           New Album
         </h1>
 
+        <p className="mt-5 max-w-xl text-sm leading-6 text-[#0d1a17]/50">
+          Create an album and upload its artwork directly
+          from your device.
+        </p>
+
         <form
           onSubmit={handleSubmit}
-          className="mt-12 space-y-6 rounded-[2rem] bg-white/50 p-7 sm:p-10"
+          className="mt-12 space-y-8 rounded-[2rem] bg-white/50 p-7 sm:p-10"
         >
+          {/* Album title */}
           <div>
             <label
               htmlFor="title"
@@ -91,23 +105,54 @@ export default function NewAlbumPage() {
             />
           </div>
 
+          {/* Artwork */}
           <div>
-            <label
-              htmlFor="artworkUrl"
-              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
-            >
-              Artwork URL
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+              Album artwork
             </label>
 
-            <input
-              id="artworkUrl"
-              name="artworkUrl"
-              required
-              placeholder="/albums/de-voice-my-soul.jpg"
-              className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-            />
+            <p className="mt-2 text-xs leading-5 text-[#0d1a17]/45">
+              Upload the album cover from your phone or
+              computer. The image will be optimized before
+              being stored on R2.
+            </p>
+
+            <div className="mt-5">
+              <MediaUploader
+                mediaType="image"
+                onUploadComplete={(url) => {
+                  setArtworkUrl(url);
+                }}
+                label="Choose album artwork"
+                accept="image/*"
+              />
+            </div>
           </div>
 
+          {/* Artwork ready */}
+          {artworkUrl && (
+            <div className="overflow-hidden rounded-2xl bg-[#0d1a17]">
+              <div className="relative aspect-square max-h-[420px]">
+                <img
+                  src={artworkUrl}
+                  alt="Album artwork preview"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+
+              <div className="p-5 text-[#f2e9d8]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#c9a24b]">
+                  Artwork ready
+                </p>
+
+                <p className="mt-2 break-all text-xs text-[#f2e9d8]/50">
+                  {artworkUrl}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Release date */}
           <div>
             <label
               htmlFor="releaseDate"
@@ -125,6 +170,7 @@ export default function NewAlbumPage() {
             />
           </div>
 
+          {/* Published */}
           <label className="flex cursor-pointer items-center gap-3">
             <input
               type="checkbox"
@@ -137,15 +183,17 @@ export default function NewAlbumPage() {
             </span>
           </label>
 
+          {/* Error */}
           {error && (
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-700">
               {error}
             </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !artworkUrl}
             className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Creating Album..." : "Create Album"}

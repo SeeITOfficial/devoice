@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 export default async function GalleryPage() {
@@ -83,26 +84,42 @@ export default async function GalleryPage() {
                         >
                           <div className="relative">
                             {item.type === "IMAGE" ? (
-                              <img
-                                src={item.url}
-                                alt={item.title ?? category.name}
-                                className="block h-auto w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
-                              />
-                            ) : (
-                              <video
-                                src={item.url}
-                                poster={item.thumbnailUrl ?? undefined}
-                                controls
-                                preload="metadata"
-                                className="block w-full"
-                              />
-                            )}
+                              <div className="relative">
+                                <Image
+                                  src={item.url}
+                                  alt={item.title ?? category.name}
+                                  width={1200}
+                                  height={1200}
+                                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                  className="block h-auto w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
+                                />
 
-                            {item.title && (
-                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-5 pb-5 pt-12">
-                                <p className="text-sm font-medium text-white">
-                                  {item.title}
-                                </p>
+                                {item.title && (
+                                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-5 pb-5 pt-12">
+                                    <p className="text-sm font-medium text-white">
+                                      {item.title}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <video
+                                  src={item.url}
+                                  poster={item.thumbnailUrl ?? undefined}
+                                  controls
+                                  preload="metadata"
+                                  playsInline
+                                  className="block w-full"
+                                />
+
+                                {item.title && (
+                                  <div className="bg-[#0d1a17] px-5 py-4">
+                                    <p className="text-sm font-medium text-[#f2e9d8]">
+                                      {item.title}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

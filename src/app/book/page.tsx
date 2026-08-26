@@ -22,6 +22,8 @@ const guestSizes = [
 
 export default function BookPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   if (submitted) {
     return (
@@ -78,35 +80,50 @@ export default function BookPage() {
       <section className="bg-[#0d1a17] px-6 py-20 text-[#f2e9d8] sm:px-10 lg:px-20">
         <form
           onSubmit={async (event) => {
-			event.preventDefault();
+            event.preventDefault();
 
-			const form = event.currentTarget;
-			const formData = new FormData(form);
+            const form = event.currentTarget;
+            const formData = new FormData(form);
 
-			const response = await fetch("/api/book", {
-				method: "POST",
-				headers: {
-				"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-				name: formData.get("name"),
-				email: formData.get("email"),
-				phone: formData.get("phone"),
-				eventType: formData.get("eventType"),
-				date: formData.get("date"),
-				location: formData.get("location"),
-				guestSize: formData.get("guestSize"),
-				message: formData.get("message"),
-				}),
-			});
+            setSubmitting(true);
+            setError("");
 
-			const result = await response.json();
+            try {
+              const response = await fetch("/api/book", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  name: formData.get("name"),
+                  email: formData.get("email"),
+                  phone: formData.get("phone"),
+                  eventType: formData.get("eventType"),
+                  date: formData.get("date"),
+                  location: formData.get("location"),
+                  guestSize: formData.get("guestSize"),
+                  message: formData.get("message"),
+                }),
+              });
 
-			if (result.success) {
-				setSubmitted(true);
-			} else {
-				alert(result.message || "Unable to submit booking.");
-			}
+              const result = await response.json();
+
+              if (!response.ok || !result.success) {
+                throw new Error(
+                  result.message || "Unable to submit booking."
+                );
+              }
+
+              setSubmitted(true);
+            } catch (error) {
+              setError(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to submit booking."
+              );
+            } finally {
+              setSubmitting(false);
+            }
 		  }}	
           className="mx-auto max-w-[1000px]"
         >
@@ -232,11 +249,20 @@ export default function BookPage() {
 
           {/* Submit */}
           <div className="mt-10 border-t border-[#f2e9d8]/10 pt-8">
+            {error && (
+              <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/10 px-5 py-4 text-sm text-red-200">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-full bg-[#f2e9d8] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#0d1a17] transition-transform hover:-translate-y-1"
+              disabled={submitting}
+              className="w-full rounded-full bg-[#f2e9d8] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#0d1a17] transition-transform hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Send Booking Request
+              {submitting
+                ? "Sending Request..."
+                : "Send Booking Request"}
             </button>
 
             <p className="mt-4 text-center text-[10px] uppercase tracking-[0.2em] text-[#f2e9d8]/30">

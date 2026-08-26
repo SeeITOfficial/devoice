@@ -11,6 +11,13 @@ type EventData = {
   description: string | null;
   posterUrl: string | null;
   cancelled: boolean;
+  ticketTypes: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number | null;
+    unlimited: boolean;
+  }[];
 };
 
 export default function EditEventPage() {
@@ -76,6 +83,10 @@ export default function EditEventPage() {
           date: formData.get("date"),
           description: formData.get("description"),
           posterUrl: formData.get("posterUrl"),
+          ticketName: formData.get("ticketName"),
+          ticketPrice: formData.get("ticketPrice"),
+          ticketQuantity: formData.get("ticketQuantity"),
+          ticketUnlimited: formData.get("ticketUnlimited") === "on",
         }),
       });
 
@@ -281,6 +292,77 @@ export default function EditEventPage() {
               defaultValue={event.description ?? ""}
               className="mt-3 w-full resize-none rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
             />
+          </div>
+
+          {/* Ticket Types */}
+          <div className="mt-12 border-t border-[#0d1a17]/10 pt-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#b18a3b]">
+              Admission
+            </p>
+
+            <h2 className="mt-3 font-serif text-3xl">
+              Ticket Types
+            </h2>
+
+            <div className="mt-6 grid gap-5">
+              <div className="rounded-[1.5rem] border border-[#0d1a17]/10 bg-white/40 p-6">
+                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                  Ticket name
+                </label>
+
+                <input
+                  name="ticketName"
+                  defaultValue={event.ticketTypes[0]?.name ?? ""}
+                  placeholder="VIP"
+                  className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                />
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                      Price (UGX)
+                    </label>
+
+                    <input
+                      name="ticketPrice"
+                      type="number"
+                      min="0"
+                      defaultValue={event.ticketTypes[0]?.price ?? ""}
+                      placeholder="100000"
+                      className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                      Quantity
+                    </label>
+
+                    <input
+                      name="ticketQuantity"
+                      type="number"
+                      min="1"
+                      defaultValue={event.ticketTypes[0]?.quantity ?? ""}
+                      placeholder="100"
+                      className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                    />
+                  </div>
+                </div>
+
+                <label className="mt-5 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    name="ticketUnlimited"
+                    defaultChecked={event.ticketTypes[0]?.unlimited ?? false}
+                    className="h-4 w-4 accent-[#c9a24b]"
+                  />
+
+                  <span className="text-sm">
+                    Unlimited availability
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
           {error && (
