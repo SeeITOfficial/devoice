@@ -12,7 +12,7 @@ const links = [
   { label: "Tickets", href: "/admin/tickets" },
   { label: "Gallery", href: "/admin/gallery" },
   { label: "Videos", href: "/admin/videos" },
-  { label: "Artist Profile", href: "/admin/profile" },
+  { label: "Profile", href: "/admin/profile" },
 ];
 
 export default function AdminNav() {
@@ -59,14 +59,24 @@ export default function AdminNav() {
         </nav>
 
         {/* Footer */}
-        <div className="hidden border-t border-[#f2e9d8]/10 p-5 lg:block">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#f2e9d8]/25">
-            Management Portal
-          </p>
+        <div className="border-t border-[#f2e9d8]/10 p-3 lg:p-5">
+          <Link
+            href="/"
+            className="block rounded-xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2e9d8]/60 transition-colors hover:bg-[#f2e9d8]/5 hover:text-[#f2e9d8]"
+          >
+            View Website
+          </Link>
 
-          <p className="mt-2 text-xs text-[#f2e9d8]/40">
-            De Voice · Da Diva
-          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch("/api/admin/logout", { method: "POST" });
+              window.location.assign("/admin/login");
+            }}
+            className="mt-1 block w-full rounded-xl px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[#f2e9d8]/40 transition-colors hover:bg-[#f2e9d8]/5 hover:text-[#f2e9d8]"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </aside>

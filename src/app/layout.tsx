@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import SiteChrome from "@/components/layout/SiteChrome";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -23,13 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={geist.variable}>
       <body className="min-h-screen bg-[var(--off-white)] text-[var(--text)] antialiased">
-        <Navbar />
-
-        <main className="flex-1">
-          {children}
-        </main>
-
-        <Footer />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );
