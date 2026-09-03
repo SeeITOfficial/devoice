@@ -8,6 +8,8 @@ import FeaturedVideos from "@/components/home/FeaturedVideos";
 import GalleryPreview from "@/components/home/GalleryPreview";
 import BookingCTA from "@/components/home/BookingCTA";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const profile = await prisma.artistProfile.findFirst();
 

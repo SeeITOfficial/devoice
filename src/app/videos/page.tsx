@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 function isValidUrl(url: string | null | undefined) {
   if (!url || !url.trim()) {
     return false;

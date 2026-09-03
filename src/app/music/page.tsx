@@ -2,6 +2,8 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import AudioPlayer from "@/components/music/AudioPlayer";
 
+export const dynamic = "force-dynamic";
+
 function isValidImageUrl(url: string | null | undefined): boolean {
   if (!url || typeof url !== "string") return false;
   
