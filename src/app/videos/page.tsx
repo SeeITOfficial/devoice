@@ -128,7 +128,7 @@ export default async function VideosPage() {
                     }`}
                   >
                     {/* Video */}
-                    <div className="relative aspect-video min-h-[280px] overflow-hidden bg-[#111d19]">
+                    <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden bg-[#111d19]">
                       {video.source === "UPLOAD" &&
                       validVideoUrl ? (
                         <video
@@ -139,39 +139,43 @@ export default async function VideosPage() {
                           controls
                           preload="metadata"
                           playsInline
-                          className="absolute inset-0 h-full w-full object-cover"
+                          className="w-full h-auto max-h-[70vh] object-contain"
                         />
                       ) : youtube ? (
-                        <iframe
-                          src={getYouTubeEmbedUrl(
-                            video.videoUrl
-                          )}
-                          title={video.title}
-                          className="absolute inset-0 h-full w-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                        />
+                        <div className="w-full aspect-video">
+                          <iframe
+                            src={getYouTubeEmbedUrl(
+                              video.videoUrl
+                            )}
+                            title={video.title || "Video"}
+                            className="h-full w-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                          />
+                        </div>
                       ) : vimeo ? (
-                        <iframe
-                          src={getVimeoEmbedUrl(
-                            video.videoUrl
-                          )}
-                          title={video.title}
-                          className="absolute inset-0 h-full w-full"
-                          allow="autoplay; fullscreen; picture-in-picture"
-                          allowFullScreen
-                        />
+                        <div className="w-full aspect-video">
+                          <iframe
+                            src={getVimeoEmbedUrl(
+                              video.videoUrl
+                            )}
+                            title={video.title || "Video"}
+                            className="h-full w-full"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
                           {isValidUrl(
                             video.thumbnailUrl
                           ) ? (
                             <Image
-                              src={video.thumbnailUrl}
-                              alt={video.title}
+                              src={video.thumbnailUrl!}
+                              alt={video.title || "Thumbnail"}
                               fill
                               sizes="(max-width: 1024px) 100vw, 60vw"
-                              className="object-cover opacity-60"
+                              className="object-contain opacity-60"
                             />
                           ) : null}
 
@@ -197,7 +201,7 @@ export default async function VideosPage() {
                       </p>
 
                       <h2 className="mt-4 font-serif text-4xl sm:text-5xl">
-                        {video.title}
+                        {video.title || null}
                       </h2>
 
                       <p className="mt-5 max-w-md text-sm leading-7 text-[#f2e9d8]/55">

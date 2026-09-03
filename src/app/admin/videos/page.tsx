@@ -66,7 +66,7 @@ export default async function AdminVideosPage() {
                   {video.thumbnailUrl ? (
                     <img
                       src={video.thumbnailUrl}
-                      alt={video.title}
+                      alt={video.title || ""}
                       className="absolute inset-0 h-full w-full object-cover"
                     />
                   ) : (
@@ -85,7 +85,7 @@ export default async function AdminVideosPage() {
                 {/* Details */}
                 <div className="p-6">
                   <h2 className="font-serif text-2xl">
-                    {video.title}
+                    {video.title || null}
                   </h2>
 
                   <p className="mt-3 truncate text-xs text-[#0d1a17]/40">

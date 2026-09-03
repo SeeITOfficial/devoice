@@ -144,40 +144,6 @@ export default async function FeaturedMusic() {
                 </p>
               </div>
 
-              {/* Tracks */}
-              {album.songs.length > 0 && (
-                <div className="mt-12">
-                  <div className="border-t border-[#f2e9d8]/15">
-                    {album.songs.slice(0, 5).map((song, index) => (
-                      <div
-                        key={song.id}
-                        className="flex items-center justify-between border-b border-[#f2e9d8]/15 py-5"
-                      >
-                        <div className="flex items-center gap-5">
-                          <span className="text-xs text-[#c9a24b]/60">
-                            {String(index + 1).padStart(2, "0")}
-                          </span>
-
-                          <div>
-                            <p className="font-serif text-xl text-[#f2e9d8]">
-                              {song.title}
-                            </p>
-
-                            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[#f2e9d8]/35">
-                              {album.title}
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className="text-xs text-[#f2e9d8]/35">
-                          {song.releaseDate.getFullYear()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="mt-10">
                 <Link
                   href="/music"

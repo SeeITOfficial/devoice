@@ -300,7 +300,7 @@ export default function NewGalleryItemPage() {
               htmlFor="title"
               className="text-[10px] font-bold uppercase tracking-[0.2em]"
             >
-              Title
+              Title (Optional)
             </label>
 
             <input

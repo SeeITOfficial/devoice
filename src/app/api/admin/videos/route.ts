@@ -10,12 +10,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const validThumbnailUrl = validateMediaUrl(body.thumbnailUrl, "image");
+    const validThumbnailUrl = body.thumbnailUrl ? validateMediaUrl(body.thumbnailUrl, "image") : null;
     const validVideoUrl = validateMediaUrl(body.videoUrl, "any");
 
     if (
-      !body.title ||
-      !validThumbnailUrl ||
       !validVideoUrl ||
       !body.source
     ) {
@@ -23,10 +21,14 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "Title, valid thumbnail (R2 only), source and valid video URL are required.",
+            "Source and valid video URL are required.",
         },
         { status: 400 }
       );
+    }
+
+    if (body.thumbnailUrl && !validThumbnailUrl) {
+      return NextResponse.json({ success: false, message: "Invalid thumbnail URL (must be R2 hosted)." }, { status: 400 });
     }
 
     if (!["UPLOAD", "EXTERNAL"].includes(body.source)) {
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
     const video = await prisma.video.create({
       data: {
-        title: body.title.trim(),
+        title: body.title?.trim() || null,
         thumbnailUrl: validThumbnailUrl,
         source: body.source,
         videoUrl: validVideoUrl,

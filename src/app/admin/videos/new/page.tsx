@@ -35,12 +35,6 @@ export default function NewVideoPage() {
       return;
     }
 
-    if (!thumbnailUrl.trim()) {
-      setError("Please add a video thumbnail.");
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch("/api/admin/videos", {
         method: "POST",
@@ -49,7 +43,7 @@ export default function NewVideoPage() {
         },
         body: JSON.stringify({
           title: formData.get("title"),
-          thumbnailUrl: thumbnailUrl.trim(),
+          thumbnailUrl: thumbnailUrl.trim() || null,
           source: videoMode,
           videoUrl: videoUrl.trim(),
         }),
@@ -108,13 +102,12 @@ export default function NewVideoPage() {
               htmlFor="title"
               className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40"
             >
-              Video title
+              Video title (Optional)
             </label>
 
             <input
               id="title"
               name="title"
-              required
               placeholder="Nankinga — Official Music Video"
               className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
             />
@@ -193,7 +186,7 @@ export default function NewVideoPage() {
           {/* Thumbnail */}
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-              Thumbnail
+              Thumbnail (Optional)
             </label>
 
             <p className="mt-2 text-xs leading-5 text-[#0d1a17]/45">
@@ -267,8 +260,7 @@ export default function NewVideoPage() {
             type="submit"
             disabled={
               loading ||
-              !videoUrl ||
-              !thumbnailUrl
+              !videoUrl
             }
             className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >

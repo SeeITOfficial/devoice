@@ -233,8 +233,8 @@ model GalleryItem {
 
 model Video {
   id           String      @id @default(cuid())
-  title        String
-  thumbnailUrl String
+  title        String?
+  thumbnailUrl String?
   source       VideoSource
   videoUrl     String
   createdAt    DateTime    @default(now())
