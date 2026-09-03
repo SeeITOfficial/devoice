@@ -19,7 +19,6 @@ const requiredVariables = [
   "R2_BUCKET_NAME",
   "R2_PUBLIC_URL",
   "RESEND_API_KEY",
-  "EMAIL_FROM",
   "NEXT_PUBLIC_BASE_URL",
   "TICKET_SESSION_SECRET",
 ] as const;
@@ -83,7 +82,7 @@ export function getServerConfig(): ServerConfig {
     r2BucketName: values.R2_BUCKET_NAME,
     r2PublicUrl: values.R2_PUBLIC_URL,
     resendApiKey: values.RESEND_API_KEY,
-    emailFrom: values.EMAIL_FROM,
+    emailFrom: process.env.EMAIL_FROM?.trim() || "onboarding@resend.dev",
     baseUrl: values.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
     ticketSessionSecret: values.TICKET_SESSION_SECRET,
   };
