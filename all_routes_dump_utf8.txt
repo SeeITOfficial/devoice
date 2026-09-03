@@ -1,0 +1,2829 @@
+﻿
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\albums\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const releaseDate = body.releaseDate ? new Date(body.releaseDate) : null;
+    const validArtworkUrl = validateMediaUrl(body.artworkUrl, "image");
+
+    if (!title || !validArtworkUrl || !body.releaseDate) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Title, valid artwork URL from uploads, and release date are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(releaseDate?.getTime() ?? NaN)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid release date format.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const album = await prisma.album.create({
+      data: {
+        title: title,
+        artworkUrl: validArtworkUrl,
+        releaseDate: releaseDate as Date,
+        published: Boolean(body.published),
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        album,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Album creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create album.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\bookings\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!body.status) {
+      return NextResponse.json(
+        { message: "Status is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!["PENDING", "CONFIRMED"].includes(body.status)) {
+      return NextResponse.json(
+        { message: "Invalid booking status." },
+        { status: 400 }
+      );
+    }
+
+    const booking = await prisma.booking.update({
+      where: {
+        id,
+      },
+      data: {
+        status: body.status,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      booking,
+    });
+  } catch (error) {
+    console.error("Booking update error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to update booking.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\events\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    const title =
+      typeof body.title === "string"
+        ? body.title.trim()
+        : "";
+
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim()
+        : "";
+
+    const posterUrl = body.posterUrl
+        ? validateMediaUrl(body.posterUrl, "image")
+        : null;
+
+    if (body.posterUrl && !posterUrl) {
+      return NextResponse.json({ success: false, message: "Invalid poster URL (must be R2 hosted)." }, { status: 400 });
+    }
+
+    const date =
+      typeof body.date === "string"
+        ? new Date(body.date)
+        : null;
+
+    if (!title || !body.date) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Title and date are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid event date.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (date <= new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Event date must be in the future.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const event = await prisma.event.create({
+      data: {
+        title,
+        date,
+        description: description || null,
+        posterUrl: posterUrl || null,
+        ticketTypes: {
+          create: {
+            name: body.ticketName,
+            price: Number(body.ticketPrice),
+            quantity: body.ticketUnlimited
+              ? null
+              : Number(body.ticketQuantity),
+            unlimited: Boolean(body.ticketUnlimited),
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        event,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Event creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create event.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\events\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const { id } = await params;
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        ticketTypes: {
+          orderBy: {
+            price: "asc",
+          },
+        },
+        orders: {
+          where: {
+            status: "CONFIRMED",
+          },
+          include: {
+            tickets: {
+              where: {
+                status: { in: ["VALID", "USED"] },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return NextResponse.json(
+        { message: "Event not found." },
+        { status: 404 }
+      );
+    }
+
+    // Calculate accounting statistics
+    const stats = {
+      totalEntered: 0,
+      totalRevenue: 0,
+      byTicketType: {} as Record<string, { entered: number; revenue: number }>,
+      byPaymentMethod: {
+        ONLINE: { entered: 0, revenue: 0 },
+        WALK_IN: { entered: 0, revenue: 0 },
+      },
+    };
+
+    // Initialize ticket types
+    event.ticketTypes.forEach(tt => {
+      stats.byTicketType[tt.name] = { entered: 0, revenue: 0 };
+    });
+
+    event.orders.forEach((order) => {
+      const isOnline = order.paymentMethod === "MOBILE_MONEY";
+      const paymentKey = isOnline ? "ONLINE" : "WALK_IN";
+
+      order.tickets.forEach((ticket) => {
+        const type = event.ticketTypes.find(t => t.id === ticket.ticketTypeId);
+        if (!type) return;
+
+        stats.totalRevenue += type.price;
+        stats.byTicketType[type.name].revenue += type.price;
+        stats.byPaymentMethod[paymentKey].revenue += type.price;
+
+        if (ticket.status === "USED") {
+          stats.totalEntered += 1;
+          stats.byTicketType[type.name].entered += 1;
+          stats.byPaymentMethod[paymentKey].entered += 1;
+        }
+      });
+    });
+
+    // Strip orders from the response body to avoid huge payloads
+    const { orders, ...eventWithoutOrders } = event;
+
+    return NextResponse.json({ 
+      success: true, 
+      event: eventWithoutOrders,
+      stats 
+    });
+  } catch (error) {
+    console.error("Event fetch error:", error);
+
+    return NextResponse.json(
+      { message: "Unable to load event." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const data: {
+      title?: string;
+      date?: Date;
+      description?: string | null;
+      posterUrl?: string | null;
+      cancelled?: boolean;
+    } = {};
+
+    if (body.title !== undefined) {
+      if (!body.title.trim()) {
+        return NextResponse.json(
+          { message: "Event title cannot be empty." },
+          { status: 400 }
+        );
+      }
+
+      data.title = body.title.trim();
+    }
+
+    if (body.date !== undefined) {
+      const date = new Date(body.date);
+
+      if (Number.isNaN(date.getTime())) {
+        return NextResponse.json(
+          { message: "Invalid event date." },
+          { status: 400 }
+        );
+      }
+
+      data.date = date;
+    }
+
+    if (body.description !== undefined) {
+      data.description = body.description || null;
+    }
+
+    if (body.posterUrl !== undefined) {
+      if (body.posterUrl) {
+        const validated = validateMediaUrl(body.posterUrl, "image");
+        if (!validated) {
+           return NextResponse.json({ message: "Invalid poster URL (must be R2 hosted)." }, { status: 400 });
+        }
+        data.posterUrl = validated;
+      } else {
+        data.posterUrl = null;
+      }
+    }
+
+    if (body.cancelled !== undefined) {
+      data.cancelled = Boolean(body.cancelled);
+    }
+
+    const event = await prisma.$transaction(async (transaction) => {
+      if (body.ticketTypes !== undefined) {
+        if (!Array.isArray(body.ticketTypes)) {
+          throw new Error("Invalid ticket types data.");
+        }
+
+        for (const ticket of body.ticketTypes) {
+          if (!ticket.name || !ticket.name.trim()) {
+            throw new Error("Ticket name cannot be empty.");
+          }
+          if (Number.isNaN(Number(ticket.price)) || Number(ticket.price) < 0) {
+            throw new Error("Ticket price must be a valid non-negative number.");
+          }
+          if (!ticket.unlimited && (Number.isNaN(Number(ticket.quantity)) || Number(ticket.quantity) < 1)) {
+            throw new Error("Ticket quantity must be at least 1 for finite tickets.");
+          }
+        }
+
+        const existingTicketTypes = await transaction.ticketType.findMany({
+          where: { eventId: id },
+          include: {
+            _count: { select: { tickets: true } }
+          }
+        });
+
+        const incomingIds = new Set(
+          body.ticketTypes
+            .map((t: any) => t.id)
+            .filter((i: any) => i)
+        );
+
+        const toDelete = existingTicketTypes.filter(et => !incomingIds.has(et.id));
+        for (const ticket of toDelete) {
+          if (ticket._count.tickets > 0) {
+            throw new Error(`Cannot delete ticket type '${ticket.name}' because it has issued tickets.`);
+          }
+          await transaction.ticketType.delete({
+            where: { id: ticket.id }
+          });
+        }
+
+        for (const ticket of body.ticketTypes) {
+          const ticketData = {
+            name: ticket.name.trim(),
+            price: Number(ticket.price),
+            quantity: ticket.unlimited ? null : Number(ticket.quantity),
+            unlimited: Boolean(ticket.unlimited),
+          };
+
+          if (ticket.id) {
+            const existing = existingTicketTypes.find(et => et.id === ticket.id);
+            if (!existing) {
+              throw new Error(`Ticket type ${ticket.id} not found.`);
+            }
+
+            await transaction.ticketType.update({
+              where: { id: ticket.id },
+              data: ticketData,
+            });
+          } else {
+            await transaction.ticketType.create({
+              data: {
+                ...ticketData,
+                eventId: id,
+              },
+            });
+          }
+        }
+      }
+
+      const updatedEvent = await transaction.event.update({
+        where: { id },
+        data,
+      });
+
+      return transaction.event.findUnique({
+        where: { id: updatedEvent.id },
+        include: { ticketTypes: true },
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      event,
+    });
+  } catch (error) {
+    console.error("Event update error:", error);
+
+    const isClientError = error instanceof Error && error.message.includes("Cannot delete");
+    
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Unable to update event.",
+      },
+      { status: isClientError ? 400 : 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\gallery\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    if (!["IMAGE", "VIDEO"].includes(body.type)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid media type.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const validUrl = validateMediaUrl(body.url, body.type === "IMAGE" ? "image" : "any");
+    const validThumbnail = body.thumbnailUrl ? validateMediaUrl(body.thumbnailUrl, "image") : null;
+
+    if (!body.type || !validUrl || !body.categoryId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Type, valid media URL (R2 only for images) and category are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (body.thumbnailUrl && !validThumbnail) {
+      return NextResponse.json({ success: false, message: "Invalid thumbnail URL (must be R2 hosted)." }, { status: 400 });
+    }
+
+    const category = await prisma.galleryCategory.findUnique({
+      where: {
+        id: body.categoryId,
+      },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Gallery category not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const item = await prisma.galleryItem.create({
+      data: {
+        type: body.type,
+        url: validUrl,
+        thumbnailUrl: validThumbnail,
+        title: body.title || null,
+        categoryId: body.categoryId,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        item,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Gallery item creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to add gallery media.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\gallery\categories\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function GET(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const categories = await prisma.galleryCategory.findMany({
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    console.error("Gallery categories error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to load categories.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    const name = body.name?.trim();
+
+    if (!name) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Category name is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.galleryCategory.findUnique({
+      where: {
+        name,
+      },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "That category already exists.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const category = await prisma.galleryCategory.create({
+      data: {
+        name,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        category,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Gallery category creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create category.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\login\route.ts ====
+import { NextResponse } from "next/server";
+import { scryptSync, timingSafeEqual } from "crypto";
+import { prisma } from "@/lib/prisma";
+
+function verifyPassword(password: string, storedPassword: string) {
+  const [salt, storedHash] = storedPassword.split(":");
+
+  if (!salt || !storedHash) {
+    return false;
+  }
+
+  const hash = scryptSync(password, salt, 64).toString("hex");
+
+  return timingSafeEqual(
+    Buffer.from(hash, "hex"),
+    Buffer.from(storedHash, "hex")
+  );
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    if (!body.email || !body.password) {
+      return NextResponse.json(
+        {
+          message: "Email and password are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const user = await prisma.managementUser.findUnique({
+      where: {
+        email: body.email.toLowerCase(),
+      },
+    });
+
+    if (!user || !verifyPassword(body.password, user.passwordHash)) {
+      return NextResponse.json(
+        {
+          message: "Invalid email or password.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const response = NextResponse.json({
+      success: true,
+    });
+
+    response.cookies.set("devoice_management", user.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Admin login error:", error);
+
+    return NextResponse.json(
+      {
+        message: "Unable to sign in.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\messages\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    if (typeof body.read !== "boolean") {
+      return NextResponse.json(
+        {
+          message: "Read status must be a boolean.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const message = await prisma.contactMessage.update({
+      where: {
+        id,
+      },
+      data: {
+        read: body.read,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message,
+    });
+  } catch (error) {
+    console.error("Message update error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to update message.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\orders\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function GET(request: Request) {
+  try {
+    const isAdmin = await validateAdminApiRequest(request);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { message: "Unauthorised." },
+        { status: 401 }
+      );
+    }
+
+    const orders = await prisma.ticketOrder.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        event: {
+          select: { id: true, title: true, date: true },
+        },
+        tickets: {
+          include: {
+            ticketType: {
+              select: { id: true, name: true, price: true },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true, orders });
+  } catch (error) {
+    console.error("Admin orders fetch error:", error);
+    return NextResponse.json(
+      { message: "Unable to load orders." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\orders\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const isAdmin = await validateAdminApiRequest(request);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { message: "Unauthorised." },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!body.action || !["CONFIRM_PAYMENT", "REJECT"].includes(body.action)) {
+      return NextResponse.json(
+        { message: "Invalid action." },
+        { status: 400 }
+      );
+    }
+
+    const order = await prisma.ticketOrder.findUnique({
+      where: { id },
+      include: {
+        tickets: {
+          include: {
+            ticketType: { select: { id: true, name: true, price: true } },
+          },
+        },
+        event: { select: { id: true, title: true, date: true } },
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json(
+        { message: "Order not found." },
+        { status: 404 }
+      );
+    }
+
+    if (order.status !== "PENDING") {
+      return NextResponse.json(
+        { message: `Order is already ${order.status}.` },
+        { status: 400 }
+      );
+    }
+
+    if (body.action === "REJECT") {
+      const updatedOrder = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticketOrder.update({
+          where: { id },
+          data: { status: "REJECTED" },
+        });
+
+        await tx.ticket.updateMany({
+          where: { orderId: id },
+          data: { status: "INVALID" },
+        });
+
+        return updated;
+      });
+
+      return NextResponse.json({ success: true, order: updatedOrder });
+    }
+
+    // â”€â”€ CONFIRM_PAYMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    const ticketTypeId = order.tickets[0]?.ticketTypeId;
+
+    if (!ticketTypeId) {
+      return NextResponse.json(
+        { message: "Order has no tickets." },
+        { status: 400 }
+      );
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const ticketType = await tx.ticketType.findUnique({
+        where: { id: ticketTypeId },
+      });
+
+      if (!ticketType) {
+        throw new Error("Ticket type not found.");
+      }
+
+      if (!ticketType.unlimited && ticketType.quantity !== null) {
+        const confirmedTicketsCount = await tx.ticket.count({
+          where: {
+            ticketTypeId,
+            order: { status: "CONFIRMED" },
+          },
+        });
+
+        if (confirmedTicketsCount + order.quantity > ticketType.quantity) {
+          const error = new Error("SOLD_OUT");
+          error.name = "InventoryError";
+          throw error;
+        }
+      }
+
+      const updatedOrder = await tx.ticketOrder.update({
+        where: { id },
+        data: { status: "CONFIRMED" },
+      });
+
+      await tx.ticket.updateMany({
+        where: { orderId: id, status: "RESERVED" },
+        data: { status: "VALID" },
+      });
+
+      return updatedOrder;
+    });
+
+    // â”€â”€ Send confirmation email (after transaction succeeds) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Payment is already confirmed â€” email failure must NOT roll it back.
+
+    let emailSent = false;
+    let emailError: string | undefined;
+
+    if (order.email) {
+      try {
+        const { sendPaymentConfirmedEmail } = await import("@/lib/email");
+        
+        const emailResult = await sendPaymentConfirmedEmail({
+          to: order.email,
+          customerName: order.customerName,
+          eventTitle: order.event.title,
+          eventDate: order.event.date,
+          quantity: order.quantity,
+          totalAmount: order.quantity * (order.tickets[0]?.ticketType.price || 0),
+          tickets: order.tickets.map((t) => ({
+            ticketCode: t.ticketCode,
+            qrToken: t.qrToken,
+            ticketTypeName: t.ticketType.name,
+          })),
+        });
+
+        emailSent = emailResult.ok;
+        emailError = emailResult.error;
+      } catch (err) {
+        emailError = err instanceof Error ? err.message : "Email build failed";
+        console.error("[order confirm] email build error:", emailError);
+      }
+    } else {
+      emailError = "No email address on file for this order.";
+    }
+
+    return NextResponse.json({
+      success: true,
+      order: result,
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "InventoryError") {
+      return NextResponse.json(
+        {
+          success: false,
+          result: "SOLD_OUT",
+          message:
+            "Sold out â€” another confirmed payment took the remaining tickets.",
+        },
+        { status: 400 }
+      );
+    }
+
+    console.error("Admin order confirmation error:", error);
+    return NextResponse.json(
+      { message: "Unable to process order." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\profile\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function GET(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const profile = await prisma.artistProfile.findFirst();
+
+    return NextResponse.json({
+      success: true,
+      profile,
+    });
+  } catch (error) {
+    console.error("Profile fetch error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to load artist profile.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    if (!body.name?.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Artist name is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const validHeroImage = body.heroImage ? validateMediaUrl(body.heroImage, "image") : null;
+    const validHeroVideo = body.heroVideo ? validateMediaUrl(body.heroVideo, "any") : null;
+
+    if (body.heroImage && !validHeroImage) {
+      return NextResponse.json({ success: false, message: "Invalid hero image URL (must be R2 hosted)." }, { status: 400 });
+    }
+
+    const existing = await prisma.artistProfile.findFirst();
+
+    const data = {
+      name: body.name.trim(),
+      tagline: body.tagline?.trim() || null,
+      bio: body.bio?.trim() || null,
+      heroImage: validHeroImage,
+      heroVideo: validHeroVideo,
+    };
+
+    const profile = existing
+      ? await prisma.artistProfile.update({
+          where: {
+            id: existing.id,
+          },
+          data,
+        })
+      : await prisma.artistProfile.create({
+          data,
+        });
+
+    return NextResponse.json({
+      success: true,
+      profile,
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to update artist profile.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\songs\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+    
+    const validAudioUrl = validateMediaUrl(body.audioUrl, "any");
+    const validArtworkUrl = body.artworkUrl ? validateMediaUrl(body.artworkUrl, "image") : null;
+
+    if (
+      !body.title ||
+      !validAudioUrl ||
+      !body.releaseDate ||
+      !body.albumId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Title, valid audio URL, release date and album are required. Artwork URL must be valid if provided.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const album = await prisma.album.findUnique({
+      where: {
+        id: body.albumId,
+      },
+    });
+
+    if (!album) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Album not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const song = await prisma.song.create({
+      data: {
+        title: body.title,
+        audioUrl: validAudioUrl,
+        artworkUrl: validArtworkUrl,
+        releaseDate: new Date(body.releaseDate),
+        published: Boolean(body.published),
+        albumId: body.albumId,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        song,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Song creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create song.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\tickets\validate\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function POST(request: Request) {
+  try {
+    const isAdmin = await validateAdminApiRequest(request);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { message: "Unauthorised." },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const code = (body.ticketCode ?? body.qrToken ?? "").trim();
+
+    if (!code) {
+      return NextResponse.json(
+        { message: "Provide a ticketCode or qrToken." },
+        { status: 400 }
+      );
+    }
+
+    // Look up by ticketCode or qrToken
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        OR: [{ ticketCode: code }, { qrToken: code }],
+      },
+      include: {
+        ticketType: {
+          select: { id: true, name: true, price: true, unlimited: true, quantity: true },
+        },
+        order: {
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                cancelled: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, result: "NOT_FOUND", message: "Ticket not found." },
+        { status: 404 }
+      );
+    }
+
+    const isWalkIn = ticket.order.paymentMethod === "CASH";
+
+    // Reserved / Unpaid
+    if (ticket.status === "RESERVED") {
+      if (!isWalkIn) {
+        return NextResponse.json({
+          success: false,
+          result: "RESERVED",
+          message: "Payment has not been confirmed for this ticket.",
+          ticket: {
+            id: ticket.id,
+            ticketCode: ticket.ticketCode,
+            status: ticket.status,
+            ticketType: ticket.ticketType,
+            customerName: ticket.order.customerName,
+            phone: ticket.order.phone,
+            email: ticket.order.email,
+            event: ticket.order.event,
+          },
+        });
+      }
+
+      // CASH Walk-in logic: Check inventory and validate atomic
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          if (!ticket.ticketType.unlimited && ticket.ticketType.quantity !== null) {
+            const confirmedCount = await tx.ticket.count({
+              where: {
+                ticketTypeId: ticket.ticketType.id,
+                order: { status: "CONFIRMED" },
+              },
+            });
+
+            // Make sure we have inventory for the ENTIRE order since we confirm the whole order
+            if (confirmedCount + ticket.order.quantity > ticket.ticketType.quantity) {
+              throw new Error("SOLD_OUT");
+            }
+          }
+
+          // Confirm the order
+          await tx.ticketOrder.update({
+            where: { id: ticket.orderId },
+            data: { status: "CONFIRMED" },
+          });
+
+          // Mark all tickets in the order as VALID
+          await tx.ticket.updateMany({
+            where: { orderId: ticket.orderId, status: "RESERVED" },
+            data: { status: "VALID" },
+          });
+
+          // Mark THIS specific ticket as USED
+          await tx.ticket.update({
+            where: { id: ticket.id },
+            data: { status: "USED" },
+          });
+
+          return true;
+        });
+
+        return NextResponse.json({
+          success: true,
+          result: "CHECKED_IN",
+          message: "CASH / WALK-IN - ENTRY ACCEPTED",
+          ticket: {
+            id: ticket.id,
+            ticketCode: ticket.ticketCode,
+            status: "USED",
+            ticketType: ticket.ticketType,
+            customerName: ticket.order.customerName,
+            phone: ticket.order.phone,
+            email: ticket.order.email,
+            event: ticket.order.event,
+          },
+        });
+      } catch (err) {
+        if (err instanceof Error && err.message === "SOLD_OUT") {
+          return NextResponse.json({
+            success: false,
+            result: "SOLD_OUT",
+            message: "Tickets are sold out. Cannot accept this walk-in.",
+            ticket: null
+          });
+        }
+        throw err;
+      }
+    }
+
+    // Already consumed
+    if (ticket.status === "USED") {
+      return NextResponse.json({
+        success: false,
+        result: "ALREADY_USED",
+        message: "This ticket has already been used.",
+        ticket: {
+          id: ticket.id,
+          ticketCode: ticket.ticketCode,
+          status: ticket.status,
+          ticketType: ticket.ticketType,
+          customerName: ticket.order.customerName,
+          phone: ticket.order.phone,
+          email: ticket.order.email,
+          event: ticket.order.event,
+        },
+      });
+    }
+
+    // Invalidated
+    if (ticket.status === "INVALID") {
+      return NextResponse.json({
+        success: false,
+        result: "INVALID",
+        message: "This ticket is invalid.",
+        ticket: {
+          id: ticket.id,
+          ticketCode: ticket.ticketCode,
+          status: ticket.status,
+          ticketType: ticket.ticketType,
+          customerName: ticket.order.customerName,
+          phone: ticket.order.phone,
+          email: ticket.order.email,
+          event: ticket.order.event,
+        },
+      });
+    }
+
+    // VALID â€” attempt atomic VALID â†’ USED transition
+    const updated = await prisma.ticket.updateMany({
+      where: {
+        id: ticket.id,
+        status: "VALID",
+      },
+      data: { status: "USED" },
+    });
+
+    if (updated.count === 0) {
+      return NextResponse.json({
+        success: false,
+        result: "ALREADY_USED",
+        message: "This ticket was just used by another check-in attempt.",
+        ticket: {
+          id: ticket.id,
+          ticketCode: ticket.ticketCode,
+          status: "USED",
+          ticketType: ticket.ticketType,
+          customerName: ticket.order.customerName,
+          phone: ticket.order.phone,
+          email: ticket.order.email,
+          event: ticket.order.event,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      result: "CHECKED_IN",
+      message: isWalkIn ? "CASH / WALK-IN - ENTRY ACCEPTED" : "ONLINE / PAID - ENTRY ACCEPTED",
+      ticket: {
+        id: ticket.id,
+        ticketCode: ticket.ticketCode,
+        status: "USED",
+        ticketType: ticket.ticketType,
+        customerName: ticket.order.customerName,
+        phone: ticket.order.phone,
+        email: ticket.order.email,
+        event: ticket.order.event,
+      },
+    });
+  } catch (error) {
+    console.error("Ticket validation error:", error);
+    return NextResponse.json(
+      { message: "Unable to validate ticket." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\tickets\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const isAdmin = await validateAdminApiRequest(request);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { message: "Unauthorised." },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!body.status || !["INVALID"].includes(body.status)) {
+      return NextResponse.json(
+        {
+          message:
+            "Only INVALID is an accepted target status for this endpoint.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { message: "Ticket not found." },
+        { status: 404 }
+      );
+    }
+
+    // Disallow any transition back to VALID
+    if (body.status === "VALID") {
+      return NextResponse.json(
+        {
+          message:
+            "A ticket cannot be manually set to VALID through this endpoint.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: { status: "INVALID" },
+      include: {
+        ticketType: { select: { id: true, name: true, price: true } },
+        order: {
+          select: {
+            id: true,
+            customerName: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true, ticket: updated });
+  } catch (error) {
+    console.error("Admin ticket update error:", error);
+    return NextResponse.json(
+      { message: "Unable to update ticket." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\upload\route.ts ====
+import { NextResponse } from "next/server";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+
+const ALLOWED_TYPES = {
+  image: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ],
+  audio: [
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/aac",
+    "audio/ogg",
+    "audio/webm",
+  ],
+  video: [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+  ],
+} as const;
+
+const MAX_SIZE = {
+  image: 15 * 1024 * 1024,
+  audio: 100 * 1024 * 1024,
+  video: 500 * 1024 * 1024,
+};
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    const {
+      fileName,
+      contentType,
+      size,
+      mediaType,
+    } = body;
+
+    if (!fileName || !contentType || !size || !mediaType) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "fileName, contentType, size and mediaType are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate size is a positive integer
+    const sizeNum = typeof size === "number" ? size : NaN;
+    if (!Number.isFinite(sizeNum) || sizeNum <= 0) {
+      return NextResponse.json(
+        { success: false, message: "size must be a positive number." },
+        { status: 400 }
+      );
+    }
+
+    if (!["image", "audio", "video"].includes(mediaType)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid media type.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const allowedTypes =
+      ALLOWED_TYPES[mediaType as keyof typeof ALLOWED_TYPES];
+
+    if (!allowedTypes.includes(contentType as never)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Unsupported ${mediaType} format.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const maxSize =
+      MAX_SIZE[mediaType as keyof typeof MAX_SIZE];
+
+    if (sizeNum > maxSize) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `File is too large. Maximum size is ${Math.round(
+            maxSize / 1024 / 1024
+          )}MB.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize filename: keep only safe characters, strip leading dots from each segment
+    const rawBaseName = String(fileName)
+      .replace(/[^a-zA-Z0-9._-]/g, "-")
+      .replace(/-+/g, "-")
+      .split(".")
+      .map((seg) => seg.replace(/^\.+/, "") || "x")
+      .join(".");
+
+    const extension = rawBaseName.includes(".")
+      ? rawBaseName.split(".").pop()?.toLowerCase() ?? "bin"
+      : "bin";
+
+    const safeName = rawBaseName;
+
+    const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+
+    const folder =
+      mediaType === "image"
+        ? "images"
+        : mediaType === "audio"
+          ? "audio"
+          : "videos";
+
+    const key = `${folder}/${uniqueName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: sizeNum,
+    });
+
+    const uploadUrl = await getSignedUrl(r2, command, {
+      expiresIn: 60 * 10,
+    });
+
+    const publicUrl =
+      `${process.env.R2_PUBLIC_URL}/${key}`;
+
+    return NextResponse.json({
+      success: true,
+      uploadUrl,
+      publicUrl,
+      key,
+      contentType,
+      extension,
+    });
+  } catch (error) {
+    console.error("R2 upload URL error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create upload URL.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\admin\videos\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
+
+export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    const body = await request.json();
+
+    const validThumbnailUrl = validateMediaUrl(body.thumbnailUrl, "image");
+    const validVideoUrl = validateMediaUrl(body.videoUrl, "any");
+
+    if (
+      !body.title ||
+      !validThumbnailUrl ||
+      !validVideoUrl ||
+      !body.source
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Title, valid thumbnail (R2 only), source and valid video URL are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!["UPLOAD", "EXTERNAL"].includes(body.source)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid video source.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const video = await prisma.video.create({
+      data: {
+        title: body.title.trim(),
+        thumbnailUrl: validThumbnailUrl,
+        source: body.source,
+        videoUrl: validVideoUrl,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        video,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Video creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to create video.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\book\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    if (!body.name || !body.phone || !body.date || !body.location) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Name, phone, date and location are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const service = await prisma.bookingService.findFirst({
+      where: {
+        active: true,
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+    });
+
+    if (!service) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No booking service is currently available.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const booking = await prisma.booking.create({
+      data: {
+        name: body.name,
+        phone: body.phone,
+        email: body.email || null,
+        eventDate: new Date(body.date),
+        location: body.location,
+        details: [
+          body.eventType ? `Event type: ${body.eventType}` : "",
+          body.guestSize ? `Expected attendance: ${body.guestSize}` : "",
+          body.message ? `Message: ${body.message}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        serviceId: service.id,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        id: booking.id,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Booking error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to submit booking.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\contact\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    if (!body.name || !body.phone || !body.message) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Name, phone and message are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const message = await prisma.contactMessage.create({
+      data: {
+        name: body.name,
+        phone: body.phone,
+        email: body.email || null,
+        message: body.subject
+          ? `Subject: ${body.subject}\n\n${body.message}`
+          : body.message,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        id: message.id,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Contact error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to send message.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\events\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+type Props = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export async function GET(
+  _request: Request,
+  { params }: Props
+) {
+  try {
+    const { id } = await params;
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        ticketTypes: {
+          orderBy: {
+            price: "asc",
+          },
+        },
+      },
+    });
+
+    if (!event || event.cancelled) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Event not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (event.date < new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This event has already taken place.",
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      event: {
+        id: event.id,
+        title: event.title,
+        date: event.date.toISOString(),
+        ticketTypes: event.ticketTypes.map((ticket) => ({
+          id: ticket.id,
+          name: ticket.name,
+          price: ticket.price,
+          quantity: ticket.quantity,
+          unlimited: ticket.unlimited,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Event API error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to load event.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\events\[id]\walk-in\route.ts ====
+import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
+
+type WalkInRequest = {
+  eventId?: string;
+  ticketTypeId?: string;
+  quantity?: number;
+};
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const body = (await request.json()) as WalkInRequest;
+    
+    const { id: eventId } = await params;
+    const ticketTypeId = body.ticketTypeId?.trim();
+    const quantity = Number(body.quantity);
+
+    if (
+      !eventId ||
+      !ticketTypeId ||
+      !Number.isInteger(quantity) ||
+      quantity < 1
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please provide a valid ticket type and quantity.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id: eventId,
+      },
+      include: {
+        ticketTypes: {
+          where: {
+            id: ticketTypeId,
+          },
+        },
+      },
+    });
+
+    if (!event || event.cancelled) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This event is no longer available.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (event.date < new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Tickets are no longer available for this event.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const ticketType = event.ticketTypes[0];
+
+    if (!ticketType) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The selected ticket type does not exist.",
+        },
+        { status: 404 }
+      );
+    }
+
+    // A Walk-in generation does not consume inventory yet, so no strict check is performed here.
+    // However, we could do a soft check to provide better UX if already sold out.
+    if (!ticketType.unlimited && ticketType.quantity !== null) {
+      const soldTickets = await prisma.ticket.count({
+        where: {
+          ticketTypeId: ticketType.id,
+          order: {
+            status: "CONFIRMED",
+          },
+        },
+      });
+
+      if (soldTickets >= ticketType.quantity) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Tickets are sold out.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Create a PENDING order with CASH payment method
+      const order = await tx.ticketOrder.create({
+        data: {
+          customerName: "Walk-in",
+          phone: "WALK-IN",
+          email: null,
+          quantity,
+          eventId: event.id,
+          status: "PENDING",
+          paymentMethod: "CASH",
+        },
+      });
+
+      const tickets = [];
+
+      for (let index = 0; index < quantity; index++) {
+        const ticket = await tx.ticket.create({
+          data: {
+            ticketCode: `DV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`,
+            qrToken: randomUUID(),
+            orderId: order.id,
+            ticketTypeId: ticketType.id,
+            status: "RESERVED",
+          },
+        });
+
+        tickets.push(ticket);
+      }
+
+      return {
+        order,
+        tickets,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Walk-in ticket generated.",
+      order: {
+        id: result.order.id,
+        quantity: result.order.quantity,
+        status: result.order.status,
+      },
+      // Pass back the details needed to show the QR code
+      ticketData: {
+        ticketType: ticketType.name,
+        price: ticketType.price,
+        quantity: quantity,
+        total: ticketType.price * quantity,
+        // Using the order's first ticket's qrToken for the order summary QR.
+        // Wait, does the walk-in UX want one QR per ticket, or one QR for the order?
+        // The prompt says: "The admin is effectively confirming payment and entry together. After successful validation: ticket/order becomes confirmed/entered, ticket becomes USED." 
+        // We will show a QR for each ticket in the UI.
+      },
+      tickets: result.tickets.map((ticket) => ({
+        id: ticket.id,
+        ticketCode: ticket.ticketCode,
+        qrToken: ticket.qrToken,
+      })),
+    });
+  } catch (error) {
+    console.error("Walk-in ticket generation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Unable to generate ticket.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\orders\[id]\route.ts ====
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const order = await prisma.ticketOrder.findUnique({
+      where: { id },
+      include: {
+        event: {
+          select: { id: true, title: true, date: true, posterUrl: true },
+        },
+        tickets: {
+          include: {
+            ticketType: { select: { id: true, name: true, price: true } },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json({ message: "Order not found." }, { status: 404 });
+    }
+
+    // Only allow viewing instructions if it's PENDING and MOBILE_MONEY
+    // If it's CONFIRMED, the customer should go to /ticket
+    // If it's CASH (Walk-in), they pay at the door.
+
+    const settings = await prisma.siteSettings.findFirst();
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        id: order.id,
+        status: order.status,
+        quantity: order.quantity,
+        customerName: order.customerName,
+        paymentMethod: order.paymentMethod,
+        event: order.event,
+        ticketType: order.tickets[0]?.ticketType || null,
+        totalAmount: order.quantity * (order.tickets[0]?.ticketType.price || 0),
+      },
+      paymentDetails: {
+        provider: settings?.paymentProvider || "MTN / Airtel Money",
+        accountNumber: settings?.paymentAccountNumber || "Not configured",
+        accountName: settings?.paymentAccountName || "Not configured",
+      },
+    });
+  } catch (error) {
+    console.error("Order fetch error:", error);
+    return NextResponse.json(
+      { message: "Unable to load order." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\ticket\orders\route.ts ====
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { verifySession } from "@/app/api/ticket/verify-code/route";
+
+/**
+ * GET /api/ticket/orders
+ *
+ * Returns all ticket orders for the verified phone number.
+ * Requires a valid ticket_session cookie.
+ *
+ * Returns CONFIRMED and PENDING orders (not REJECTED).
+ * Only CONFIRMED order tickets expose the qrToken.
+ */
+
+export async function GET() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ticket_session")?.value ?? "";
+
+    const session = verifySession(token);
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: "Session expired. Please verify again." },
+        { status: 401 }
+      );
+    }
+
+    const orders = await prisma.ticketOrder.findMany({
+      where: {
+        phone: session.phone,
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        event: {
+          select: { id: true, title: true, date: true },
+        },
+        tickets: {
+          include: {
+            ticketType: {
+              select: { id: true, name: true, price: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    // For PENDING orders, strip qrToken from tickets (payment not confirmed)
+    const sanitized = orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      quantity: order.quantity,
+      customerName: order.customerName,
+      createdAt: order.createdAt.toISOString(),
+      event: {
+        id: order.event.id,
+        title: order.event.title,
+        date: order.event.date.toISOString(),
+      },
+      tickets: order.tickets.map((t) => ({
+        id: t.id,
+        ticketCode: t.ticketCode,
+        // Only expose qrToken for confirmed, valid/used tickets
+        qrToken:
+          order.status === "CONFIRMED" && t.status !== "INVALID"
+            ? t.qrToken
+            : null,
+        status: t.status,
+        ticketType: t.ticketType,
+      })),
+    }));
+
+    return NextResponse.json({ success: true, orders: sanitized });
+  } catch (error) {
+    console.error("[ticket/orders] error:", error);
+    return NextResponse.json(
+      { success: false, message: "Unable to load tickets." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\ticket\request-code\route.ts ====
+import { NextResponse } from "next/server";
+import { createHash, randomInt } from "crypto";
+import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
+
+/**
+ * POST /api/ticket/request-code
+ * Body: { phone: string }
+ *
+ * Looks up orders by phone. If any exist, generates a 6-digit OTP,
+ * stores a hash of it, and emails it to the associated address(es).
+ *
+ * Always returns a generic success message to prevent phone number enumeration.
+ */
+
+const GENERIC_RESPONSE =
+  "If tickets are associated with this number, a verification code has been sent to the registered email address.";
+
+const OTP_EXPIRY_MINUTES = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 15;
+const RATE_LIMIT_MAX_REQUESTS = 3;
+
+function hashOtp(otp: string): string {
+  return createHash("sha256").update(otp).digest("hex");
+}
+
+function generateOtp(): string {
+  // 6-digit cryptographically random OTP (000000â€“999999)
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const phone = (body.phone ?? "").trim();
+
+    if (!phone) {
+      return NextResponse.json(
+        { success: true, message: GENERIC_RESPONSE },
+        { status: 200 }
+      );
+    }
+
+    // --- Rate limiting: max RATE_LIMIT_MAX_REQUESTS per phone per window ---
+    const windowStart = new Date(
+      Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000
+    );
+
+    const recentRequests = await prisma.ticketAccessCode.count({
+      where: {
+        phone,
+        createdAt: { gte: windowStart },
+      },
+    });
+
+    if (recentRequests >= RATE_LIMIT_MAX_REQUESTS) {
+      // Still return generic â€” don't reveal rate limit info to enumeration
+      return NextResponse.json(
+        { success: true, message: GENERIC_RESPONSE },
+        { status: 200 }
+      );
+    }
+
+    // --- Look up confirmed or pending orders for this phone ---
+    const orders = await prisma.ticketOrder.findMany({
+      where: {
+        phone,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        email: { not: null },
+      },
+      select: { email: true },
+      distinct: ["email"],
+    });
+
+    if (orders.length === 0) {
+      // No orders â€” return generic response (do NOT reveal this)
+      return NextResponse.json(
+        { success: true, message: GENERIC_RESPONSE },
+        { status: 200 }
+      );
+    }
+
+    // --- Generate and store OTP ---
+    const otp = generateOtp();
+    const codeHash = hashOtp(otp);
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    await prisma.ticketAccessCode.create({
+      data: {
+        phone,
+        codeHash,
+        expiresAt,
+      },
+    });
+
+    // --- Send email to each unique address associated with this phone ---
+    const uniqueEmails = [
+      ...new Set(orders.map((o) => o.email).filter(Boolean) as string[]),
+    ];
+
+    for (const email of uniqueEmails) {
+      await sendEmail({
+        to: email,
+        subject: "Your De Voice ticket access code",
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f2e9d8;color:#0d1a17;">
+            <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#b18a3b;margin:0;">De Voice</p>
+            <h1 style="font-size:36px;margin:12px 0 24px;font-weight:600;">Your verification code</h1>
+            <div style="background:#0d1a17;border-radius:16px;padding:32px;text-align:center;">
+              <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#c9a24b;margin:0 0 12px;">One-time code</p>
+              <p style="font-size:48px;font-weight:700;letter-spacing:0.15em;color:#f2e9d8;margin:0;font-family:monospace;">${otp}</p>
+            </div>
+            <p style="margin:24px 0 8px;font-size:14px;color:#0d1a17cc;">
+              This code expires in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.
+              Enter it at <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/ticket" style="color:#b18a3b;">/ticket</a> to view your tickets.
+            </p>
+            <p style="font-size:12px;color:#0d1a1766;">If you did not request this code, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
+    }
+
+    return NextResponse.json(
+      { success: true, message: GENERIC_RESPONSE },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[request-code] error:", error);
+    // Still return generic to avoid leaking information
+    return NextResponse.json(
+      { success: true, message: GENERIC_RESPONSE },
+      { status: 200 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\ticket\verify-code\route.ts ====
+import { NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * POST /api/ticket/verify-code
+ * Body: { phone: string; code: string }
+ *
+ * Verifies the OTP submitted by the customer.
+ * On success: sets a short-lived HTTP-only signed session cookie.
+ * On failure: increments attempts counter; blocks after MAX_ATTEMPTS.
+ *
+ * Never returns ticket data â€” only a success/failure signal.
+ */
+
+const MAX_ATTEMPTS = 5;
+const SESSION_MAX_AGE_SECONDS = 60 * 60; // 1 hour
+
+function hashOtp(otp: string): string {
+  return createHash("sha256").update(otp).digest("hex");
+}
+
+function signSession(phone: string): string {
+  const secret = process.env.TICKET_SESSION_SECRET;
+  if (!secret) {
+    throw new Error(
+      "TICKET_SESSION_SECRET environment variable is not configured."
+    );
+  }
+  const payload = { phone, verifiedAt: Date.now() };
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHash("sha256")
+    .update(`${payloadB64}.${secret}`)
+    .digest("hex");
+  return `${payloadB64}.${sig}`;
+}
+
+export function verifySession(token: string): { phone: string } | null {
+  try {
+    const secret = process.env.TICKET_SESSION_SECRET;
+    if (!secret) return null;
+
+    const [payloadB64, sig] = token.split(".");
+    if (!payloadB64 || !sig) return null;
+
+    const expectedSig = createHash("sha256")
+      .update(`${payloadB64}.${secret}`)
+      .digest("hex");
+
+    if (sig !== expectedSig) return null;
+
+    const payload = JSON.parse(
+      Buffer.from(payloadB64, "base64url").toString("utf-8")
+    ) as { phone: string; verifiedAt: number };
+
+    const ageMs = Date.now() - payload.verifiedAt;
+    if (ageMs > SESSION_MAX_AGE_SECONDS * 1000) return null;
+
+    return { phone: payload.phone };
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const phone = (body.phone ?? "").trim();
+    const code = (body.code ?? "").trim();
+
+    if (!phone || !code || !/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid code format." },
+        { status: 400 }
+      );
+    }
+
+    // Find the most recent unexpired, unused code for this phone
+    const accessCode = await prisma.ticketAccessCode.findFirst({
+      where: {
+        phone,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!accessCode) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No valid code found. Please request a new one.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Rate-limit verification attempts
+    if (accessCode.attempts >= MAX_ATTEMPTS) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Too many incorrect attempts. Please request a new code.",
+        },
+        { status: 429 }
+      );
+    }
+
+    const submittedHash = hashOtp(code);
+    const isValid = submittedHash === accessCode.codeHash;
+
+    if (!isValid) {
+      // Increment attempts
+      await prisma.ticketAccessCode.update({
+        where: { id: accessCode.id },
+        data: { attempts: accessCode.attempts + 1 },
+      });
+
+      const remaining = MAX_ATTEMPTS - (accessCode.attempts + 1);
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            remaining > 0
+              ? `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+              : "Too many incorrect attempts. Please request a new code.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Valid â€” mark as used (one-time use)
+    await prisma.ticketAccessCode.update({
+      where: { id: accessCode.id },
+      data: { usedAt: new Date() },
+    });
+
+    // Issue signed session cookie
+    const token = signSession(phone);
+    const cookieStore = await cookies();
+    cookieStore.set("ticket_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+      path: "/",
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[verify-code] error:", error);
+    return NextResponse.json(
+      { success: false, message: "An error occurred. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+==== C:\Users\SeeIT\Desktop\jonathan\artist-site\src\app\api\tickets\route.ts ====
+import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
+
+type TicketRequest = {
+  eventId?: string;
+  ticketTypeId?: string;
+  quantity?: number;
+  customerName?: string;
+  phone?: string;
+  email?: string;
+};
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as TicketRequest;
+
+    const eventId = body.eventId?.trim();
+    const ticketTypeId = body.ticketTypeId?.trim();
+    const customerName = body.customerName?.trim();
+    let phone = body.phone?.trim() ?? "";
+    let email = body.email?.trim().toLowerCase() || "";
+    const quantity = Number(body.quantity);
+
+    // Strict Uganda phone validation: exactly 10 digits starting with 07, no spaces allowed.
+    // Only surrounding whitespace is stripped (via .trim() above).
+    // Internal spaces, dashes, or any non-digit characters make the number invalid.
+    const phoneValid = /^07\d{8}$/.test(phone);
+
+    // Strict email format check
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    if (
+      !eventId ||
+      !ticketTypeId ||
+      !customerName ||
+      !phone ||
+      !phoneValid ||
+      !email ||
+      !emailValid ||
+      !Number.isInteger(quantity) ||
+      quantity < 1
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: !phoneValid
+            ? "Please provide a valid 10-digit Uganda phone number starting with 07."
+            : !email || !emailValid
+            ? "A valid email address is required to receive your ticket confirmation."
+            : "Please provide valid ticket and customer details.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id: eventId,
+      },
+      include: {
+        ticketTypes: {
+          where: {
+            id: ticketTypeId,
+          },
+        },
+      },
+    });
+
+    if (!event || event.cancelled) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This event is no longer available.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (event.date < new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Tickets are no longer available for this event.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const ticketType = event.ticketTypes[0];
+
+    if (!ticketType) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The selected ticket type does not exist.",
+        },
+        { status: 404 }
+      );
+    }
+
+    /*
+     * SQLite does not give us a convenient atomic inventory
+     * operation through Prisma here, so calculate sold tickets
+     * inside the transaction and create the order/tickets together.
+     */
+    const result = await prisma.$transaction(async (tx) => {
+      const soldTickets = await tx.ticket.count({
+        where: {
+          ticketTypeId: ticketType.id,
+          order: {
+            status: "CONFIRMED",
+          },
+        },
+      });
+
+      if (
+        !ticketType.unlimited &&
+        ticketType.quantity !== null &&
+        soldTickets + quantity > ticketType.quantity
+      ) {
+        throw new Error(
+          `Only ${
+            ticketType.quantity - soldTickets
+          } tickets are available.`
+        );
+      }
+
+      const order = await tx.ticketOrder.create({
+        data: {
+          customerName,
+          phone,
+          email: email || null,
+          quantity,
+          eventId: event.id,
+          status: "PENDING",
+        },
+      });
+
+      const tickets = [];
+
+      for (let index = 0; index < quantity; index++) {
+        const ticket = await tx.ticket.create({
+          data: {
+            ticketCode: `DV-${randomUUID()
+              .replace(/-/g, "")
+              .slice(0, 10)
+              .toUpperCase()}`,
+            qrToken: randomUUID(),
+            orderId: order.id,
+            ticketTypeId: ticketType.id,
+            status: "RESERVED",
+          },
+        });
+
+        tickets.push(ticket);
+      }
+
+      return {
+        order,
+        tickets,
+      };
+    });
+
+    // Send Email 1: Payment Required (if email exists)
+    if (email) {
+      try {
+        const { sendPaymentRequiredEmail } = await import("@/lib/email");
+        await sendPaymentRequiredEmail({
+          to: email,
+          customerName,
+          eventTitle: event.title,
+          eventDate: event.date,
+          ticketTypeName: ticketType.name,
+          quantity,
+          totalAmount: quantity * ticketType.price,
+          orderId: result.order.id,
+        });
+      } catch (err) {
+        console.error("Initial payment email failed:", err);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Ticket request received. Please complete your payment.",
+      order: {
+        id: result.order.id,
+        status: result.order.status,
+      },
+      paymentInstructions: true,
+    });
+  } catch (error) {
+    console.error("Ticket creation error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to create tickets.",
+      },
+      { status: 500 }
+    );
+  }
+}
+

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const categories = await prisma.galleryCategory.findMany({
       orderBy: {
@@ -27,6 +31,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const body = await request.json();
 

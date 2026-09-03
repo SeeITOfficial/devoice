@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
+type TicketTypeForm = {
+  id?: string;
+  name: string;
+  price: string | number;
+  quantity: string | number;
+  unlimited: boolean;
+};
+
 type EventData = {
   id: string;
   title: string;
@@ -20,6 +28,16 @@ type EventData = {
   }[];
 };
 
+type EventStats = {
+  totalEntered: number;
+  totalRevenue: number;
+  byTicketType: Record<string, { entered: number; revenue: number }>;
+  byPaymentMethod: {
+    ONLINE: { entered: number; revenue: number };
+    WALK_IN: { entered: number; revenue: number };
+  };
+};
+
 export default function EditEventPage() {
   const params = useParams();
   const router = useRouter();
@@ -27,10 +45,13 @@ export default function EditEventPage() {
   const id = params.id as string;
 
   const [event, setEvent] = useState<EventData | null>(null);
+  const [stats, setStats] = useState<EventStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
+
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeForm[]>([]);
 
   useEffect(() => {
     async function loadEvent() {
@@ -45,6 +66,16 @@ export default function EditEventPage() {
         }
 
         setEvent(result.event);
+        setStats(result.stats || null);
+        setTicketTypes(
+          result.event.ticketTypes.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            price: t.price.toString(),
+            quantity: t.quantity !== null ? t.quantity.toString() : "",
+            unlimited: t.unlimited,
+          }))
+        );
       } catch (error) {
         setError(
           error instanceof Error
@@ -58,6 +89,41 @@ export default function EditEventPage() {
 
     loadEvent();
   }, [id]);
+
+  function addTicketType() {
+    setTicketTypes((current) => [
+      ...current,
+      {
+        name: "",
+        price: "",
+        quantity: "",
+        unlimited: false,
+      },
+    ]);
+  }
+
+  function updateTicketType(
+    index: number,
+    field: keyof TicketTypeForm,
+    value: string | boolean
+  ) {
+    setTicketTypes((current) =>
+      current.map((ticket, i) =>
+        i === index
+          ? {
+              ...ticket,
+              [field]: value,
+            }
+          : ticket
+      )
+    );
+  }
+
+  function removeTicketType(index: number) {
+    setTicketTypes((current) =>
+      current.filter((_, i) => i !== index)
+    );
+  }
 
   async function handleSubmit(
     submitEvent: React.FormEvent<HTMLFormElement>
@@ -83,10 +149,7 @@ export default function EditEventPage() {
           date: formData.get("date"),
           description: formData.get("description"),
           posterUrl: formData.get("posterUrl"),
-          ticketName: formData.get("ticketName"),
-          ticketPrice: formData.get("ticketPrice"),
-          ticketQuantity: formData.get("ticketQuantity"),
-          ticketUnlimited: formData.get("ticketUnlimited") === "on",
+          ticketTypes,
         }),
       });
 
@@ -99,6 +162,15 @@ export default function EditEventPage() {
       }
 
       setEvent(result.event);
+      setTicketTypes(
+        result.event.ticketTypes.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          price: t.price.toString(),
+          quantity: t.quantity !== null ? t.quantity.toString() : "",
+          unlimited: t.unlimited,
+        }))
+      );
       alert("Event updated.");
     } catch (error) {
       setError(
@@ -295,74 +367,155 @@ export default function EditEventPage() {
           </div>
 
           {/* Ticket Types */}
-          <div className="mt-12 border-t border-[#0d1a17]/10 pt-10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#b18a3b]">
-              Admission
-            </p>
+          <div className="mt-12 border-t border-[#0d1a17]/10 pt-8">
+            <div className="flex items-end justify-between gap-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#b18a3b]">
+                  Admission
+                </p>
 
-            <h2 className="mt-3 font-serif text-3xl">
-              Ticket Types
-            </h2>
-
-            <div className="mt-6 grid gap-5">
-              <div className="rounded-[1.5rem] border border-[#0d1a17]/10 bg-white/40 p-6">
-                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-                  Ticket name
-                </label>
-
-                <input
-                  name="ticketName"
-                  defaultValue={event.ticketTypes[0]?.name ?? ""}
-                  placeholder="VIP"
-                  className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-                />
-
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-                      Price (UGX)
-                    </label>
-
-                    <input
-                      name="ticketPrice"
-                      type="number"
-                      min="0"
-                      defaultValue={event.ticketTypes[0]?.price ?? ""}
-                      placeholder="100000"
-                      className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-                      Quantity
-                    </label>
-
-                    <input
-                      name="ticketQuantity"
-                      type="number"
-                      min="1"
-                      defaultValue={event.ticketTypes[0]?.quantity ?? ""}
-                      placeholder="100"
-                      className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-                    />
-                  </div>
-                </div>
-
-                <label className="mt-5 flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    name="ticketUnlimited"
-                    defaultChecked={event.ticketTypes[0]?.unlimited ?? false}
-                    className="h-4 w-4 accent-[#c9a24b]"
-                  />
-
-                  <span className="text-sm">
-                    Unlimited availability
-                  </span>
-                </label>
+                <h2 className="mt-2 font-serif text-3xl">
+                  Ticket Types
+                </h2>
+                
+                <p className="mt-2 text-sm text-[#0d1a17]/45">
+                  Define the ticket options for this event.
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={addTicketType}
+                className="shrink-0 rounded-full border border-[#0d1a17]/15 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors hover:border-[#c9a24b]"
+              >
+                + Add Ticket
+              </button>
             </div>
+
+            {ticketTypes.length === 0 ? (
+              <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#0d1a17]/15 px-6 py-10 text-center">
+                <p className="text-sm text-[#0d1a17]/40">
+                  No ticket types added.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={addTicketType}
+                  className="mt-4 text-[10px] font-bold uppercase tracking-[0.15em] text-[#b18a3b]"
+                >
+                  Add the first ticket type →
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-5">
+                {ticketTypes.map((ticket, index) => (
+                  <div
+                    key={index}
+                    className="rounded-[1.5rem] border border-[#0d1a17]/10 bg-white/40 p-6"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b18a3b]">
+                        Ticket {index + 1}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => removeTicketType(index)}
+                        className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-700/60 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="mt-5">
+                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                        Name
+                      </label>
+
+                      <input
+                        value={ticket.name}
+                        onChange={(e) =>
+                          updateTicketType(
+                            index,
+                            "name",
+                            e.target.value
+                          )
+                        }
+                        required
+                        placeholder="VIP"
+                        className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                      />
+                    </div>
+
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                          Price (UGX)
+                        </label>
+
+                        <input
+                          value={ticket.price}
+                          onChange={(e) =>
+                            updateTicketType(
+                              index,
+                              "price",
+                              e.target.value
+                            )
+                          }
+                          required
+                          min="0"
+                          type="number"
+                          placeholder="100000"
+                          className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
+                          Quantity
+                        </label>
+
+                        <input
+                          value={ticket.quantity}
+                          onChange={(e) =>
+                            updateTicketType(
+                              index,
+                              "quantity",
+                              e.target.value
+                            )
+                          }
+                          required={!ticket.unlimited}
+                          disabled={ticket.unlimited}
+                          min="1"
+                          type="number"
+                          placeholder="100"
+                          className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/60 px-5 py-4 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-40 focus:border-[#c9a24b]"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="mt-5 flex cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={ticket.unlimited}
+                        onChange={(e) =>
+                          updateTicketType(
+                            index,
+                            "unlimited",
+                            e.target.checked
+                          )
+                        }
+                        className="h-4 w-4 accent-[#c9a24b]"
+                      />
+
+                      <span className="text-sm">
+                        Unlimited availability
+                      </span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && (
@@ -379,6 +532,63 @@ export default function EditEventPage() {
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
+
+        {stats && (
+          <div className="mt-12 rounded-[2rem] border border-[#0d1a17]/10 bg-white/50 p-7 sm:p-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b18a3b]">
+              Accounting
+            </p>
+            <h2 className="mt-2 font-serif text-3xl">Ticket Sales & Entry</h2>
+
+            <div className="mt-8 grid gap-6 sm:grid-cols-2">
+              <div className="rounded-xl bg-[#0d1a17] p-6 text-[#f2e9d8]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Total Entered</p>
+                <p className="mt-2 font-serif text-4xl">{stats.totalEntered}</p>
+              </div>
+              <div className="rounded-xl bg-[#c9a24b] p-6 text-[#0d1a17]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Total Revenue</p>
+                <p className="mt-2 font-serif text-4xl">{stats.totalRevenue.toLocaleString()} UGX</p>
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-8 sm:grid-cols-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#0d1a17]/60 mb-4">By Ticket Type</h3>
+                <div className="space-y-4">
+                  {Object.entries(stats.byTicketType).map(([typeName, data]) => (
+                    <div key={typeName} className="flex justify-between items-center border-b border-[#0d1a17]/10 pb-3">
+                      <span className="font-medium text-sm">{typeName}</span>
+                      <div className="text-right">
+                        <p className="text-sm font-bold">{data.revenue.toLocaleString()} UGX</p>
+                        <p className="text-[10px] uppercase tracking-wider text-[#0d1a17]/50">{data.entered} entered</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#0d1a17]/60 mb-4">By Payment Method</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-[#0d1a17]/10 pb-3">
+                    <span className="font-medium text-sm">Online (Mobile Money)</span>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-emerald-700">{stats.byPaymentMethod.ONLINE.revenue.toLocaleString()} UGX</p>
+                      <p className="text-[10px] uppercase tracking-wider text-[#0d1a17]/50">{stats.byPaymentMethod.ONLINE.entered} entered</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-[#0d1a17]/10 pb-3">
+                    <span className="font-medium text-sm">Walk-in (Cash)</span>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-blue-700">{stats.byPaymentMethod.WALK_IN.revenue.toLocaleString()} UGX</p>
+                      <p className="text-[10px] uppercase tracking-wider text-[#0d1a17]/50">{stats.byPaymentMethod.WALK_IN.entered} entered</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 rounded-[2rem] border border-[#0d1a17]/10 bg-white/30 p-7">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">

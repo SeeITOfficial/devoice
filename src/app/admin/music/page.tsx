@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminMusicPage() {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
   const albums = await prisma.album.findMany({
     orderBy: {
       releaseDate: "desc",

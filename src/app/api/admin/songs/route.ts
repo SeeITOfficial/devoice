@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
 
 export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const body = await request.json();
+    
+    const validAudioUrl = validateMediaUrl(body.audioUrl, "any");
+    const validArtworkUrl = body.artworkUrl ? validateMediaUrl(body.artworkUrl, "image") : null;
 
     if (
       !body.title ||
-      !body.audioUrl ||
+      !validAudioUrl ||
       !body.releaseDate ||
       !body.albumId
     ) {
@@ -15,7 +23,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "Title, audio, release date and album are required.",
+            "Title, valid audio URL, release date and album are required. Artwork URL must be valid if provided.",
         },
         { status: 400 }
       );
@@ -40,8 +48,8 @@ export async function POST(request: Request) {
     const song = await prisma.song.create({
       data: {
         title: body.title,
-        audioUrl: body.audioUrl,
-        artworkUrl: body.artworkUrl || null,
+        audioUrl: validAudioUrl,
+        artworkUrl: validArtworkUrl,
         releaseDate: new Date(body.releaseDate),
         published: Boolean(body.published),
         albumId: body.albumId,

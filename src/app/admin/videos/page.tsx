@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminVideosPage() {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
   const videos = await prisma.video.findMany({
     orderBy: {
       createdAt: "desc",

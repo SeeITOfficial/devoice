@@ -2,6 +2,24 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import AudioPlayer from "@/components/music/AudioPlayer";
 
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  
+  // Check if it's a local path
+  if (trimmed.startsWith("/")) return true;
+  
+  // Check if it's a valid absolute URL
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default async function MusicPage() {
   const albums = await prisma.album.findMany({
     where: {
@@ -84,9 +102,9 @@ export default async function MusicPage() {
                   <div className="grid md:grid-cols-[360px_1fr]">
                     {/* Artwork */}
                     <div className="relative aspect-square overflow-hidden bg-[#16241f] md:aspect-auto">
-                      {album.artworkUrl ? (
+                      {isValidImageUrl(album.artworkUrl) ? (
                         <Image
-                          src={album.artworkUrl}
+                          src={album.artworkUrl as string}
                           alt={album.title}
                           fill
                           sizes="(max-width: 768px) 100vw, 360px"
@@ -183,10 +201,10 @@ export default async function MusicPage() {
                       {String(index + 1).padStart(2, "0")}
                     </span>
 
-                    {song.artworkUrl && (
+                    {isValidImageUrl(song.artworkUrl) && (
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
                         <Image
-                          src={song.artworkUrl}
+                          src={song.artworkUrl as string}
                           alt=""
                           fill
                           sizes="48px"

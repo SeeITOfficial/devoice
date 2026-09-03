@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminGalleryPage() {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
   const categories = await prisma.galleryCategory.findMany({
     orderBy: {
       createdAt: "asc",

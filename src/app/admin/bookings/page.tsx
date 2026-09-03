@@ -1,7 +1,12 @@
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import BookingActions from "@/components/admin/BookingActions";
 
 export default async function AdminBookingsPage() {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
   const bookings = await prisma.booking.findMany({
     orderBy: {
       createdAt: "desc",

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const { id } = await params;
     const body = await request.json();

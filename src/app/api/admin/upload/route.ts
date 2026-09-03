@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { getServerConfig } from "@/lib/config";
 
 const ALLOWED_TYPES = {
   image: [
@@ -34,6 +36,9 @@ const MAX_SIZE = {
 };
 
 export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const body = await request.json();
 
@@ -55,6 +60,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate size is a positive integer
+    const sizeNum = typeof size === "number" ? size : NaN;
+    if (!Number.isFinite(sizeNum) || sizeNum <= 0) {
+      return NextResponse.json(
+        { success: false, message: "size must be a positive number." },
+        { status: 400 }
+      );
+    }
+
     if (!["image", "audio", "video"].includes(mediaType)) {
       return NextResponse.json(
         {
@@ -68,7 +82,7 @@ export async function POST(request: Request) {
     const allowedTypes =
       ALLOWED_TYPES[mediaType as keyof typeof ALLOWED_TYPES];
 
-    if (!allowedTypes.includes(contentType)) {
+    if (!allowedTypes.includes(contentType as never)) {
       return NextResponse.json(
         {
           success: false,
@@ -81,7 +95,7 @@ export async function POST(request: Request) {
     const maxSize =
       MAX_SIZE[mediaType as keyof typeof MAX_SIZE];
 
-    if (size > maxSize) {
+    if (sizeNum > maxSize) {
       return NextResponse.json(
         {
           success: false,
@@ -93,14 +107,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const extension =
-      fileName.includes(".")
-        ? fileName.split(".").pop()?.toLowerCase()
-        : "bin";
-
-    const safeName = fileName
+    // Sanitize filename: keep only safe characters, strip leading dots from each segment
+    const rawBaseName = String(fileName)
       .replace(/[^a-zA-Z0-9._-]/g, "-")
-      .replace(/-+/g, "-");
+      .replace(/-+/g, "-")
+      .split(".")
+      .map((seg) => seg.replace(/^\.+/, "") || "x")
+      .join(".");
+
+    const extension = rawBaseName.includes(".")
+      ? rawBaseName.split(".").pop()?.toLowerCase() ?? "bin"
+      : "bin";
+
+    const safeName = rawBaseName;
 
     const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
 
@@ -117,14 +136,14 @@ export async function POST(request: Request) {
       Bucket: R2_BUCKET_NAME,
       Key: key,
       ContentType: contentType,
+      ContentLength: sizeNum,
     });
 
     const uploadUrl = await getSignedUrl(r2, command, {
       expiresIn: 60 * 10,
     });
 
-    const publicUrl =
-      `${process.env.R2_PUBLIC_URL}/${key}`;
+    const publicUrl = `${getServerConfig().r2PublicUrl}/${key}`;
 
     return NextResponse.json({
       success: true,

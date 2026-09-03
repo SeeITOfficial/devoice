@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const profile = await prisma.artistProfile.findFirst();
 
@@ -23,6 +28,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const body = await request.json();
 
@@ -36,14 +44,21 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const validHeroImage = body.heroImage ? validateMediaUrl(body.heroImage, "image") : null;
+    const validHeroVideo = body.heroVideo ? validateMediaUrl(body.heroVideo, "any") : null;
+
+    if (body.heroImage && !validHeroImage) {
+      return NextResponse.json({ success: false, message: "Invalid hero image URL (must be R2 hosted)." }, { status: 400 });
+    }
+
     const existing = await prisma.artistProfile.findFirst();
 
     const data = {
       name: body.name.trim(),
       tagline: body.tagline?.trim() || null,
       bio: body.bio?.trim() || null,
-      heroImage: body.heroImage?.trim() || null,
-      heroVideo: body.heroVideo?.trim() || null,
+      heroImage: validHeroImage,
+      heroVideo: validHeroVideo,
     };
 
     const profile = existing

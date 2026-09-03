@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum BookingStatus {
@@ -14,12 +14,19 @@ enum BookingStatus {
 enum TicketOrderStatus {
   PENDING
   CONFIRMED
+  REJECTED
 }
 
 enum TicketStatus {
+  RESERVED
   VALID
   USED
   INVALID
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY
+  CASH
 }
 
 enum MediaType {
@@ -33,11 +40,27 @@ enum VideoSource {
 }
 
 model ManagementUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String         @id @default(cuid())
+  email        String         @unique
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  sessions AdminSession[]
+}
+
+model AdminSession {
+  id             String   @id @default(cuid())
+  /// SHA-256 hash of the raw session token stored in the cookie.
+  /// The raw token never touches the database.
+  tokenHash      String   @unique
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  managementUserId String
+  user             ManagementUser @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+
+  @@index([managementUserId])
 }
 
 model ArtistProfile {
@@ -129,7 +152,10 @@ model TicketOrder {
   phone        String
   email        String?
   quantity     Int
+  unitPrice    Float             // Price per ticket at time of booking
+  totalAmount  Float             // Total amount for this order (quantity * unitPrice)
   status       TicketOrderStatus @default(PENDING)
+  paymentMethod PaymentMethod    @default(MOBILE_MONEY)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -143,7 +169,7 @@ model Ticket {
   id         String       @id @default(cuid())
   ticketCode String       @unique
   qrToken    String       @unique
-  status     TicketStatus @default(VALID)
+  status     TicketStatus @default(RESERVED)
   createdAt  DateTime     @default(now())
 
   orderId String
@@ -234,10 +260,25 @@ model ContactMessage {
 }
 
 model SiteSettings {
-  id              String   @id @default(cuid())
-  bookingEmail    String?
-  bookingWhatsapp String?
-  contactEmail    String?
-  contactPhone    String?
-  updatedAt       DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  bookingEmail         String?
+  bookingWhatsapp      String?
+  contactEmail         String?
+  contactPhone         String?
+  paymentProvider      String?
+  paymentAccountNumber String?
+  paymentAccountName   String?
+  updatedAt            DateTime @updatedAt
+}
+
+model TicketAccessCode {
+  id        String    @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone])
 }

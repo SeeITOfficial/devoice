@@ -1,11 +1,39 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAdminApiRequest } from "@/lib/adminAuth";
+import { validateMediaUrl } from "@/lib/urlValidator";
 
 export async function POST(request: Request) {
+  if (!await validateAdminApiRequest(request)) {
+    return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
   try {
     const body = await request.json();
 
-    if (!body.title || !body.date) {
+    const title =
+      typeof body.title === "string"
+        ? body.title.trim()
+        : "";
+
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim()
+        : "";
+
+    const posterUrl = body.posterUrl
+        ? validateMediaUrl(body.posterUrl, "image")
+        : null;
+
+    if (body.posterUrl && !posterUrl) {
+      return NextResponse.json({ success: false, message: "Invalid poster URL (must be R2 hosted)." }, { status: 400 });
+    }
+
+    const date =
+      typeof body.date === "string"
+        ? new Date(body.date)
+        : null;
+
+    if (!title || !body.date) {
       return NextResponse.json(
         {
           success: false,
@@ -15,76 +43,120 @@ export async function POST(request: Request) {
       );
     }
 
-    const ticketTypes = Array.isArray(body.ticketTypes)
-      ? body.ticketTypes
-      : [];
+    if (!date || Number.isNaN(date.getTime())) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid event date.",
+        },
+        { status: 400 }
+      );
+    }
 
-    for (const ticket of ticketTypes) {
-      if (!ticket.name?.trim()) {
+    if (date <= new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Event date must be in the future.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(body.ticketTypes) || body.ticketTypes.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "At least one ticket type is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const ticketTypes = [];
+
+    for (const ticket of body.ticketTypes) {
+      if (!ticket || typeof ticket !== "object" || Array.isArray(ticket)) {
         return NextResponse.json(
           {
             success: false,
-            message: "Every ticket type needs a name.",
+            message: "Invalid ticket type data.",
           },
           { status: 400 }
         );
       }
 
+      const name = typeof ticket.name === "string" ? ticket.name.trim() : "";
       const price = Number(ticket.price);
+      const unlimited = ticket.unlimited;
+      const quantity = Number(ticket.quantity);
 
-      if (!Number.isFinite(price) || price < 0) {
+      if (!name) {
         return NextResponse.json(
           {
             success: false,
-            message: `Invalid price for ticket "${ticket.name}".`,
+            message: "Ticket name cannot be empty.",
           },
           { status: 400 }
         );
       }
 
-      if (!ticket.unlimited) {
-        const quantity = Number(ticket.quantity);
-
-        if (!Number.isInteger(quantity) || quantity < 1) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: `Invalid quantity for ticket "${ticket.name}".`,
-            },
-            { status: 400 }
-          );
-        }
+      if (
+        ticket.price === "" ||
+        !Number.isFinite(price) ||
+        price < 0
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Ticket price must be a valid non-negative number.",
+          },
+          { status: 400 }
+        );
       }
+
+      if (typeof unlimited !== "boolean") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Ticket unlimited setting must be a boolean.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        !unlimited &&
+        (ticket.quantity === "" ||
+          !Number.isInteger(quantity) ||
+          quantity < 1)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Ticket quantity must be a valid positive integer for finite tickets.",
+          },
+          { status: 400 }
+        );
+      }
+
+      ticketTypes.push({
+        name,
+        price,
+        quantity: unlimited ? null : quantity,
+        unlimited,
+      });
     }
 
     const event = await prisma.event.create({
       data: {
-        title: body.title.trim(),
-        date: new Date(body.date),
-        description: body.description?.trim() || null,
-        posterUrl: body.posterUrl?.trim() || null,
-
+        title,
+        date,
+        description: description || null,
+        posterUrl: posterUrl || null,
         ticketTypes: {
-          create: ticketTypes.map(
-            (ticket: {
-              name: string;
-              price: string | number;
-              quantity: string | number;
-              unlimited: boolean;
-            }) => ({
-              name: ticket.name.trim(),
-              price: Number(ticket.price),
-              quantity: ticket.unlimited
-                ? null
-                : Number(ticket.quantity),
-              unlimited: Boolean(ticket.unlimited),
-            })
-          ),
+          create: ticketTypes,
         },
-      },
-
-      include: {
-        ticketTypes: true,
       },
     });
 

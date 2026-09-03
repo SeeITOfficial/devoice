@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminEventsPage() {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
   const events = await prisma.event.findMany({
     orderBy: {
       date: "asc",

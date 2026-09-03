@@ -18,22 +18,37 @@ export async function POST(request: Request) {
     const eventId = body.eventId?.trim();
     const ticketTypeId = body.ticketTypeId?.trim();
     const customerName = body.customerName?.trim();
-    const phone = body.phone?.trim();
-    const email = body.email?.trim() || null;
+    let phone = body.phone?.trim() ?? "";
+    let email = body.email?.trim().toLowerCase() || "";
     const quantity = Number(body.quantity);
+
+    // Strict Uganda phone validation: exactly 10 digits starting with 07, no spaces allowed.
+    // Only surrounding whitespace is stripped (via .trim() above).
+    // Internal spaces, dashes, or any non-digit characters make the number invalid.
+    const phoneValid = /^07\d{8}$/.test(phone);
+
+    // Strict email format check
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     if (
       !eventId ||
       !ticketTypeId ||
       !customerName ||
       !phone ||
+      !phoneValid ||
+      !email ||
+      !emailValid ||
       !Number.isInteger(quantity) ||
       quantity < 1
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Please provide valid ticket and customer details.",
+          message: !phoneValid
+            ? "Please provide a valid 10-digit Uganda phone number starting with 07."
+            : !email || !emailValid
+            ? "A valid email address is required to receive your ticket confirmation."
+            : "Please provide valid ticket and customer details.",
         },
         { status: 400 }
       );
@@ -94,9 +109,7 @@ export async function POST(request: Request) {
         where: {
           ticketTypeId: ticketType.id,
           order: {
-            status: {
-              in: ["PENDING", "CONFIRMED"],
-            },
+            status: "CONFIRMED",
           },
         },
       });
@@ -117,10 +130,12 @@ export async function POST(request: Request) {
         data: {
           customerName,
           phone,
-          email,
+          email: email || null,
           quantity,
+          unitPrice: ticketType.price,
+          totalAmount: ticketType.price * quantity,
           eventId: event.id,
-          status: "CONFIRMED",
+          status: "PENDING",
         },
       });
 
@@ -136,6 +151,7 @@ export async function POST(request: Request) {
             qrToken: randomUUID(),
             orderId: order.id,
             ticketTypeId: ticketType.id,
+            status: "RESERVED",
           },
         });
 
@@ -148,20 +164,33 @@ export async function POST(request: Request) {
       };
     });
 
+    // Send Email 1: Payment Required (if email exists)
+    if (email) {
+      try {
+        const { sendPaymentRequiredEmail } = await import("@/lib/email");
+        await sendPaymentRequiredEmail({
+          to: email,
+          customerName,
+          eventTitle: event.title,
+          eventDate: event.date,
+          ticketTypeName: ticketType.name,
+          quantity,
+          totalAmount: result.order.totalAmount,
+          orderId: result.order.id,
+        });
+      } catch (err) {
+        console.error("Initial payment email failed:", err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Tickets booked successfully.",
+      message: "Ticket request received. Please complete your payment.",
       order: {
         id: result.order.id,
-        customerName: result.order.customerName,
-        quantity: result.order.quantity,
         status: result.order.status,
       },
-      tickets: result.tickets.map((ticket) => ({
-        id: ticket.id,
-        ticketCode: ticket.ticketCode,
-        qrToken: ticket.qrToken,
-      })),
+      paymentInstructions: true,
     });
   } catch (error) {
     console.error("Ticket creation error:", error);
