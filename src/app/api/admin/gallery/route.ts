@@ -20,53 +20,57 @@ export async function POST(request: Request) {
       );
     }
 
-    const validUrl = validateMediaUrl(body.url, body.type === "IMAGE" ? "image" : "any");
-    const validThumbnail = body.thumbnailUrl ? validateMediaUrl(body.thumbnailUrl, "image") : null;
-
-    if (!body.type || !validUrl || !body.categoryId) {
+    const urls = Array.isArray(body.urls) ? body.urls : [body.url].filter(Boolean);
+    
+    if (urls.length === 0 || !body.type) {
       return NextResponse.json(
         {
           success: false,
-          message: "Type, valid media URL (R2 only for images) and category are required.",
+          message: "Type and at least one valid media URL are required.",
         },
         { status: 400 }
       );
     }
 
+    const validThumbnail = body.thumbnailUrl ? validateMediaUrl(body.thumbnailUrl, "image") : null;
     if (body.thumbnailUrl && !validThumbnail) {
       return NextResponse.json({ success: false, message: "Invalid thumbnail URL (must be R2 hosted)." }, { status: 400 });
     }
 
-    const category = await prisma.galleryCategory.findUnique({
-      where: {
-        id: body.categoryId,
-      },
-    });
-
-    if (!category) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Gallery category not found.",
-        },
-        { status: 404 }
-      );
+    if (body.categoryId) {
+      const category = await prisma.galleryCategory.findUnique({
+        where: { id: body.categoryId },
+      });
+      if (!category) {
+        return NextResponse.json(
+          { success: false, message: "Gallery category not found." },
+          { status: 404 }
+        );
+      }
     }
 
-    const item = await prisma.galleryItem.create({
-      data: {
-        type: body.type,
-        url: validUrl,
-        thumbnailUrl: validThumbnail,
-        title: body.title || null,
-        categoryId: body.categoryId,
-      },
-    });
+    const createdItems = [];
+    for (const rawUrl of urls) {
+      const validUrl = validateMediaUrl(rawUrl, body.type === "IMAGE" ? "image" : "any");
+      if (validUrl) {
+        const item = await prisma.galleryItem.create({
+          data: {
+            type: body.type,
+            url: validUrl,
+            thumbnailUrl: validThumbnail,
+            title: body.title || null,
+            categoryId: body.categoryId || null,
+          },
+        });
+        createdItems.push(item);
+      }
+    }
 
     return NextResponse.json(
       {
         success: true,
-        item,
+        items: createdItems,
+        item: createdItems[0], // for backwards compatibility
       },
       { status: 201 }
     );

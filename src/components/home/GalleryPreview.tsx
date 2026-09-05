@@ -60,7 +60,7 @@ export default async function GalleryPreview() {
                   {items[0].type === "IMAGE" ? (
                     <img
                       src={items[0].url}
-                      alt={items[0].title ?? items[0].category.name}
+                      alt={items[0].title ?? items[0].category?.name ?? "Gallery image"}
                       className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   ) : (
@@ -78,12 +78,14 @@ export default async function GalleryPreview() {
 
                   <div className="absolute bottom-7 left-7">
                     <p className="text-xs uppercase tracking-[0.3em] text-[#c9a24b]">
-                      {items[0].category.name}
+                      {items[0].category?.name ?? "Media"}
                     </p>
 
-                    <h3 className="mt-2 font-serif text-3xl text-[#f2e9d8]">
-                      {items[0].title ?? "Gallery"}
-                    </h3>
+                    {items[0].title && (
+                      <h3 className="mt-2 font-serif text-3xl text-[#f2e9d8]">
+                        {items[0].title}
+                      </h3>
+                    )}
                   </div>
                 </Link>
               )}
@@ -98,7 +100,7 @@ export default async function GalleryPreview() {
                   {item.type === "IMAGE" ? (
                     <img
                       src={item.url}
-                      alt={item.title ?? item.category.name}
+                      alt={item.title ?? item.category?.name ?? "Gallery image"}
                       className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   ) : (
@@ -116,12 +118,14 @@ export default async function GalleryPreview() {
 
                   <div className="absolute bottom-6 left-6">
                     <p className="mb-1 text-[9px] uppercase tracking-[0.25em] text-[#c9a24b]">
-                      {item.category.name}
+                      {item.category?.name ?? "Media"}
                     </p>
 
-                    <h3 className="font-serif text-2xl text-[#f2e9d8]">
-                      {item.title ?? "Gallery"}
-                    </h3>
+                    {item.title && (
+                      <h3 className="font-serif text-2xl text-[#f2e9d8]">
+                        {item.title}
+                      </h3>
+                    )}
                   </div>
                 </Link>
               ))}

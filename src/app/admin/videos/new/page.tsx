@@ -2,67 +2,73 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import MediaUploader from "@/components/admin/MediaUploader";
+import MultipleMediaUploader from "@/components/admin/MultipleMediaUploader";
 
 type VideoMode = "UPLOAD" | "EXTERNAL";
 
 export default function NewVideoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [videoMode, setVideoMode] =
-    useState<VideoMode>("UPLOAD");
-
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoMode, setVideoMode] = useState<VideoMode>("UPLOAD");
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [externalUrl, setExternalUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [title, setTitle] = useState("");
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
+  const effectiveUrls =
+    videoMode === "EXTERNAL"
+      ? externalUrl.trim()
+        ? [externalUrl.trim()]
+        : []
+      : videoUrls;
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setLoading(true);
-    setError("");
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    if (!videoUrl.trim()) {
-      setError(
-        "Please upload a video or provide an external video URL."
-      );
-      setLoading(false);
+    if (effectiveUrls.length === 0) {
+      setError("Please upload a video or provide an external video URL.");
       return;
     }
 
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
-      const response = await fetch("/api/admin/videos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: formData.get("title"),
-          thumbnailUrl: thumbnailUrl.trim() || null,
-          source: videoMode,
-          videoUrl: videoUrl.trim(),
-        }),
-      });
+      // For single upload, keep original API shape; for multiple, send all
+      const results = await Promise.all(
+        effectiveUrls.map((url) =>
+          fetch("/api/admin/videos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: title.trim() || null,
+              thumbnailUrl: thumbnailUrl.trim() || null,
+              source: videoMode,
+              videoUrl: url,
+            }),
+          }).then((r) => r.json())
+        )
+      );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || "Unable to create video."
-        );
+      const failed = results.filter((r) => !r.success);
+      if (failed.length > 0) {
+        throw new Error(failed[0]?.message ?? "Unable to create video.");
       }
 
-      window.location.href = "/admin/videos";
-    } catch (error) {
+      const count = results.length;
+      setSuccess(
+        `${count} video${count > 1 ? "s" : ""} added successfully!`
+      );
+      setVideoUrls([]);
+      setExternalUrl("");
+      setTitle("");
+      setThumbnailUrl("");
+    } catch (err) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "Unable to create video."
+        err instanceof Error ? err.message : "Unable to create video."
       );
     } finally {
       setLoading(false);
@@ -83,13 +89,11 @@ export default function NewVideoPage() {
           Video Management
         </p>
 
-        <h1 className="mt-4 font-serif text-6xl leading-none">
-          New Video
-        </h1>
+        <h1 className="mt-4 font-serif text-6xl leading-none">New Video</h1>
 
         <p className="mt-5 max-w-xl text-sm leading-6 text-[#0d1a17]/50">
-          Add an uploaded performance, music video, interview
-          or external video.
+          Add an uploaded performance, music video, interview or external video.
+          You can select multiple files at once when uploading.
         </p>
 
         <form
@@ -108,6 +112,8 @@ export default function NewVideoPage() {
             <input
               id="title"
               name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Nankinga — Official Music Video"
               className="mt-3 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
             />
@@ -124,7 +130,7 @@ export default function NewVideoPage() {
                 type="button"
                 onClick={() => {
                   setVideoMode("UPLOAD");
-                  setVideoUrl("");
+                  setExternalUrl("");
                 }}
                 className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
                   videoMode === "UPLOAD"
@@ -139,7 +145,7 @@ export default function NewVideoPage() {
                 type="button"
                 onClick={() => {
                   setVideoMode("EXTERNAL");
-                  setVideoUrl("");
+                  setVideoUrls([]);
                 }}
                 className={`rounded-full px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
                   videoMode === "EXTERNAL"
@@ -153,28 +159,23 @@ export default function NewVideoPage() {
 
             <div className="mt-5">
               {videoMode === "UPLOAD" ? (
-                <MediaUploader
+                <MultipleMediaUploader
                   mediaType="video"
-                  onUploadComplete={(url) => {
-                    setVideoUrl(url);
-                  }}
-                  label="Choose video from device"
+                  onUploadComplete={(urls) => setVideoUrls(urls)}
+                  label="Choose videos from device (select multiple)"
                   accept="video/mp4,video/webm,video/quicktime"
                 />
               ) : (
                 <div>
                   <p className="mb-3 text-xs leading-5 text-[#0d1a17]/45">
-                    Paste the video URL. YouTube and Vimeo
-                    links can be stored here for externally
-                    hosted videos.
+                    Paste the video URL. YouTube and Vimeo links can be stored
+                    here for externally hosted videos.
                   </p>
 
                   <input
                     type="url"
-                    value={videoUrl}
-                    onChange={(event) =>
-                      setVideoUrl(event.target.value)
-                    }
+                    value={externalUrl}
+                    onChange={(e) => setExternalUrl(e.target.value)}
                     placeholder="https://youtube.com/watch?v=..."
                     className="w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
                   />
@@ -183,68 +184,54 @@ export default function NewVideoPage() {
             </div>
           </div>
 
-          {/* Thumbnail */}
+          {/* Thumbnail — optional, no uploader forced */}
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0d1a17]/40">
-              Thumbnail (Optional)
+              Thumbnail URL (Optional)
             </label>
 
             <p className="mt-2 text-xs leading-5 text-[#0d1a17]/45">
-              Upload a lightweight image that will appear
-              before the video loads.
+              Leave blank to use the video&apos;s own built-in thumbnail.
             </p>
 
-            <div className="mt-5">
-              <MediaUploader
-                mediaType="image"
-                onUploadComplete={(url) => {
-                  setThumbnailUrl(url);
-                }}
-                label="Choose thumbnail from device"
-                accept="image/*"
-              />
-            </div>
-
-            <div className="mt-5">
-              <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-[#0d1a17]/35">
-                Or use thumbnail URL
-              </p>
-
-              <input
-                type="url"
-                value={thumbnailUrl}
-                onChange={(event) =>
-                  setThumbnailUrl(event.target.value)
-                }
-                placeholder="https://..."
-                className="w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
-              />
-            </div>
+            <input
+              type="url"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="https://... (optional)"
+              className="mt-4 w-full rounded-xl border border-[#0d1a17]/10 bg-white/50 px-5 py-4 text-sm outline-none focus:border-[#c9a24b]"
+            />
           </div>
 
-          {/* Video ready */}
-          {videoUrl && (
+          {/* Ready indicator */}
+          {effectiveUrls.length > 0 && (
             <div className="rounded-xl bg-[#0d1a17] p-5 text-[#f2e9d8]">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#c9a24b]">
-                Video ready
+                {effectiveUrls.length}{" "}
+                {effectiveUrls.length === 1 ? "video" : "videos"} ready
               </p>
-
-              <p className="mt-2 break-all text-xs text-[#f2e9d8]/60">
-                {videoUrl}
-              </p>
+              <div className="mt-2 space-y-1">
+                {effectiveUrls.slice(0, 5).map((u, i) => (
+                  <p key={i} className="break-all text-xs text-[#f2e9d8]/60">
+                    {u}
+                  </p>
+                ))}
+                {effectiveUrls.length > 5 && (
+                  <p className="text-xs text-[#f2e9d8]/40">
+                    +{effectiveUrls.length - 5} more
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Thumbnail ready */}
-          {thumbnailUrl && (
-            <div className="rounded-xl border border-[#0d1a17]/10 bg-white/50 p-5">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[#b18a3b]">
-                Thumbnail ready
-              </p>
-
-              <p className="mt-2 break-all text-xs text-[#0d1a17]/45">
-                {thumbnailUrl}
-              </p>
+          {/* Success */}
+          {success && (
+            <div className="rounded-xl border border-green-700/20 bg-green-50 px-5 py-4 text-sm text-green-800">
+              {success}{" "}
+              <Link href="/admin/videos" className="underline">
+                View videos
+              </Link>
             </div>
           )}
 
@@ -258,13 +245,14 @@ export default function NewVideoPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={
-              loading ||
-              !videoUrl
-            }
+            disabled={loading || effectiveUrls.length === 0}
             className="w-full rounded-full bg-[#0d1a17] px-8 py-5 text-xs font-bold uppercase tracking-[0.15em] text-[#f2e9d8] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Creating Video..." : "Create Video"}
+            {loading
+              ? "Creating..."
+              : effectiveUrls.length > 1
+                ? `Create ${effectiveUrls.length} Videos`
+                : "Create Video"}
           </button>
         </form>
       </div>

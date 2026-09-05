@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/layout/SiteChrome";
+import MediaManager from "@/components/layout/MediaManager";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={geist.variable}>
       <body className="min-h-screen bg-[var(--off-white)] text-[var(--text)] antialiased">
+        <MediaManager />
         <SiteChrome>{children}</SiteChrome>
       </body>
     </html>

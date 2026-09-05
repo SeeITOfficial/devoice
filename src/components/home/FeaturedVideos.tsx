@@ -1,24 +1,204 @@
+"use client";
+
 import Link from "next/link";
+import { useRef, useState } from "react";
 
-const videos = [
-  {
-    title: "Nankinga",
-    type: "Official Video",
-    featured: true,
-  },
-  {
-    title: "Imelda",
-    type: "Music",
-    featured: false,
-  },
-  {
-    title: "Nsonyi",
-    type: "Music",
-    featured: false,
-  },
-];
+type VideoSource = "UPLOAD" | "EXTERNAL";
 
-export default function FeaturedVideos() {
+type Video = {
+  id: string;
+  title: string | null;
+  thumbnailUrl: string | null;
+  videoUrl: string;
+  source: VideoSource;
+};
+
+function getYouTubeId(url: string) {
+  const m =
+    url.match(/[?&]v=([^&]+)/) ??
+    url.match(/youtu\.be\/([^?]+)/) ??
+    url.match(/youtube\.com\/embed\/([^?]+)/);
+  return m ? m[1] : null;
+}
+
+function getVimeoId(url: string) {
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return m ? m[1] : null;
+}
+
+function VideoTile({
+  video,
+  featured,
+}: {
+  video: Video;
+  featured: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  const youtubeId = getYouTubeId(video.videoUrl);
+  const vimeoId = getVimeoId(video.videoUrl);
+  const isEmbed = !!(youtubeId || vimeoId);
+
+  function getEmbedSrc() {
+    if (youtubeId)
+      return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`;
+    if (vimeoId)
+      return `https://player.vimeo.com/video/${vimeoId}?autoplay=1`;
+    return "";
+  }
+
+  function handleClick() {
+    if (video.source === "UPLOAD" && videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    } else if (isEmbed) {
+      setPlaying(true);
+    }
+  }
+
+  const thumbnailBg = video.thumbnailUrl
+    ? `url(${video.thumbnailUrl})`
+    : undefined;
+
+  return (
+    <article
+      className={`group relative overflow-hidden rounded-[1.5rem] bg-[#16241f] ${featured ? "aspect-video" : "min-h-[220px]"}`}
+      style={
+        video.thumbnailUrl && !playing
+          ? {
+              backgroundImage: thumbnailBg,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : undefined
+      }
+    >
+      {/* Radial glow overlay */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,162,75,0.12),transparent_60%)]" />
+
+      {/* UPLOAD: native video */}
+      {video.source === "UPLOAD" && !playing && (
+        <>
+          <video
+            ref={videoRef}
+            src={video.videoUrl}
+            poster={video.thumbnailUrl ?? undefined}
+            preload="metadata"
+            playsInline
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+            className={`absolute inset-0 h-full w-full object-cover ${video.thumbnailUrl ? "opacity-0" : ""}`}
+          />
+          <button
+            type="button"
+            aria-label="Play video"
+            onClick={handleClick}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div
+              className={`flex items-center justify-center rounded-full border border-[#c9a24b]/60 bg-[#0d1a17]/70 text-[#c9a24b] backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 ${featured ? "h-20 w-20" : "h-14 w-14"}`}
+            >
+              <svg
+                width={featured ? 20 : 16}
+                height={featured ? 20 : 16}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M8 5v14l11-7L8 5z" />
+              </svg>
+            </div>
+          </button>
+        </>
+      )}
+
+      {/* UPLOAD playing: show controls */}
+      {video.source === "UPLOAD" && playing && (
+        <video
+          ref={videoRef}
+          src={video.videoUrl}
+          poster={video.thumbnailUrl ?? undefined}
+          preload="metadata"
+          playsInline
+          autoPlay
+          controls
+          onPause={() => setPlaying(false)}
+          onEnded={() => setPlaying(false)}
+          className="absolute inset-0 h-full w-full object-contain bg-black"
+        />
+      )}
+
+      {/* EXTERNAL: iframe on click */}
+      {video.source === "EXTERNAL" && !playing && (
+        <button
+          type="button"
+          aria-label="Play video"
+          onClick={handleClick}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          {youtubeId && !video.thumbnailUrl && (
+            <img
+              src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+              alt={video.title ?? "Video thumbnail"}
+              className="absolute inset-0 h-full w-full object-cover opacity-70"
+            />
+          )}
+          <div
+            className={`relative flex items-center justify-center rounded-full border border-[#c9a24b]/60 bg-[#0d1a17]/70 text-[#c9a24b] backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 ${featured ? "h-20 w-20" : "h-14 w-14"}`}
+          >
+            <svg
+              width={featured ? 20 : 16}
+              height={featured ? 20 : 16}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M8 5v14l11-7L8 5z" />
+            </svg>
+          </div>
+        </button>
+      )}
+
+      {video.source === "EXTERNAL" && playing && (
+        <iframe
+          src={getEmbedSrc()}
+          title={video.title ?? "Video"}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full"
+        />
+      )}
+
+      {/* Label overlay */}
+      {!playing && video.title && (
+        <div
+          className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0d1a17] to-transparent ${featured ? "via-[#0d1a17]/60 p-7" : "p-6"}`}
+        >
+          <h3
+            className={`font-serif ${featured ? "text-3xl sm:text-4xl" : "text-2xl"}`}
+          >
+            {video.title}
+          </h3>
+        </div>
+      )}
+    </article>
+  );
+}
+
+export default function FeaturedVideos({
+  videos,
+}: {
+  videos: Video[];
+}) {
+  if (videos.length === 0) return null;
+
+  const [featured, ...rest] = videos;
+
   return (
     <section className="bg-[#0d1a17] px-6 py-24 text-[#f2e9d8] sm:px-10 lg:px-20">
       <div className="mx-auto max-w-[1440px]">
@@ -46,70 +226,19 @@ export default function FeaturedVideos() {
 
         {/* Video grid */}
         <div className="mt-14 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-          {/* Featured video */}
-          <article className="group relative aspect-video overflow-hidden rounded-[1.5rem] bg-[#16241f]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,162,75,0.16),transparent_55%)]" />
+          <VideoTile video={featured} featured={true} />
 
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#c9a24b]/60 bg-[#0d1a17]/70 text-[#c9a24b] backdrop-blur-sm transition-transform duration-300 group-hover:scale-110">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden
-                >
-                  <path d="M8 5v14l11-7L8 5z" />
-                </svg>
-              </div>
+          {rest.length > 0 && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+              {rest.slice(0, 2).map((video) => (
+                <VideoTile
+                  key={video.id}
+                  video={video}
+                  featured={false}
+                />
+              ))}
             </div>
-
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0d1a17] via-[#0d1a17]/60 to-transparent p-7">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#c9a24b]">
-                {videos[0].type}
-              </p>
-
-              <h3 className="mt-2 font-serif text-3xl sm:text-4xl">
-                {videos[0].title}
-              </h3>
-            </div>
-          </article>
-
-          {/* Smaller videos */}
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-            {videos.slice(1).map((video) => (
-              <article
-                key={video.title}
-                className="group relative min-h-[220px] overflow-hidden rounded-[1.5rem] bg-[#16241f]"
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,162,75,0.1),transparent_60%)]" />
-
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#c9a24b]/50 bg-[#0d1a17]/70 text-[#c9a24b] transition-transform duration-300 group-hover:scale-110">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      aria-hidden
-                    >
-                      <path d="M8 5v14l11-7L8 5z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0d1a17] to-transparent p-6">
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-[#c9a24b]/80">
-                    {video.type}
-                  </p>
-
-                  <h3 className="mt-1 font-serif text-2xl">
-                    {video.title}
-                  </h3>
-                </div>
-              </article>
-            ))}
-          </div>
+          )}
         </div>
       </div>
     </section>

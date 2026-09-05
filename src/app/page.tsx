@@ -13,6 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const profile = await prisma.artistProfile.findFirst();
 
+  const videos = await prisma.video.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+
   return (
     <main>
       <Hero
@@ -27,7 +32,7 @@ export default async function Home() {
 
       <AboutPreview />
 
-      <FeaturedVideos />
+      <FeaturedVideos videos={videos} />
 
       <GalleryPreview />
 

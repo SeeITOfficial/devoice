@@ -6,57 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-}
-
-enum TicketOrderStatus {
-  PENDING
-  CONFIRMED
-  REJECTED
-}
-
-enum TicketStatus {
-  RESERVED
-  VALID
-  USED
-  INVALID
-}
-
-enum PaymentMethod {
-  MOBILE_MONEY
-  CASH
-}
-
-enum MediaType {
-  IMAGE
-  VIDEO
-}
-
-enum VideoSource {
-  UPLOAD
-  EXTERNAL
-}
-
 model ManagementUser {
   id           String         @id @default(cuid())
   email        String         @unique
   passwordHash String
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-
-  sessions AdminSession[]
+  sessions     AdminSession[]
 }
 
 model AdminSession {
-  id             String   @id @default(cuid())
+  id               String         @id @default(cuid())
   /// SHA-256 hash of the raw session token stored in the cookie.
   /// The raw token never touches the database.
-  tokenHash      String   @unique
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
-
+  tokenHash        String         @unique
+  expiresAt        DateTime
+  createdAt        DateTime       @default(now())
   managementUserId String
   user             ManagementUser @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
 
@@ -82,8 +47,7 @@ model Album {
   published   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  songs Song[]
+  songs       Song[]
 }
 
 model Song {
@@ -95,27 +59,25 @@ model Song {
   published   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  albumId String?
-  album   Album? @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  albumId     String?
+  album       Album?   @relation(fields: [albumId], references: [id])
 
   @@index([albumId])
   @@index([releaseDate])
 }
 
 model Event {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   date        DateTime
   description String?
   posterUrl   String?
-  cancelled   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  cancelled   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   info        EventInfo[]
-  ticketTypes TicketType[]
   orders      TicketOrder[]
+  ticketTypes TicketType[]
 
   @@index([date])
 }
@@ -125,9 +87,8 @@ model EventInfo {
   label     String
   value     String
   sortOrder Int    @default(0)
-
-  eventId String
-  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
 }
@@ -139,69 +100,61 @@ model TicketType {
   quantity  Int?
   unlimited Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  eventId String
-  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  tickets Ticket[]
+  eventId   String
+  tickets   Ticket[]
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model TicketOrder {
-  id           String            @id @default(cuid())
-  customerName String
-  phone        String
-  email        String?
-  quantity     Int
-  unitPrice    Float             // Price per ticket at time of booking
-  totalAmount  Float             // Total amount for this order (quantity * unitPrice)
-  status       TicketOrderStatus @default(PENDING)
-  paymentMethod PaymentMethod    @default(MOBILE_MONEY)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  eventId String
-  event   Event @relation(fields: [eventId], references: [id])
-
-  tickets Ticket[]
+  id            String            @id @default(cuid())
+  customerName  String
+  phone         String
+  email         String?
+  quantity      Int
+  unitPrice     Float
+  totalAmount   Float
+  status        TicketOrderStatus @default(PENDING)
+  paymentMethod PaymentMethod     @default(MOBILE_MONEY)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  eventId       String
+  tickets       Ticket[]
+  event         Event             @relation(fields: [eventId], references: [id])
 }
 
 model Ticket {
-  id         String       @id @default(cuid())
-  ticketCode String       @unique
-  qrToken    String       @unique
-  status     TicketStatus @default(RESERVED)
-  createdAt  DateTime     @default(now())
-
-  orderId String
-  order   TicketOrder @relation(fields: [orderId], references: [id])
-
+  id           String       @id @default(cuid())
+  ticketCode   String       @unique
+  qrToken      String       @unique
+  status       TicketStatus @default(RESERVED)
+  createdAt    DateTime     @default(now())
+  orderId      String
   ticketTypeId String
-  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+  order        TicketOrder  @relation(fields: [orderId], references: [id])
+  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id])
 
   @@index([qrToken])
 }
 
 model BookingService {
-  id        String  @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  active    Boolean @default(true)
-  sortOrder Int     @default(0)
-
-  bookings Booking[]
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  bookings  Booking[]
 }
 
 model Booking {
-  id        String        @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String
   phone     String
   email     String?
   eventDate DateTime
   location  String
   details   String?
-  status    BookingStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
+  status    BookingStatus  @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   serviceId String
   service   BookingService @relation(fields: [serviceId], references: [id])
 
@@ -210,23 +163,21 @@ model Booking {
 }
 
 model GalleryCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-
-  items GalleryItem[]
+  id        String        @id @default(cuid())
+  name      String        @unique
+  createdAt DateTime      @default(now())
+  items     GalleryItem[]
 }
 
 model GalleryItem {
-  id           String    @id @default(cuid())
+  id           String           @id @default(cuid())
   type         MediaType
   url          String
   thumbnailUrl String?
   title        String?
-  createdAt    DateTime  @default(now())
-
-  categoryId String
-  category   GalleryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+  categoryId   String?
+  category     GalleryCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
 }
@@ -281,4 +232,37 @@ model TicketAccessCode {
   createdAt DateTime  @default(now())
 
   @@index([phone])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum TicketOrderStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum TicketStatus {
+  RESERVED
+  VALID
+  USED
+  INVALID
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY
+  CASH
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum VideoSource {
+  UPLOAD
+  EXTERNAL
 }
