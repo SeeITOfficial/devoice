@@ -7,6 +7,7 @@ import AboutPreview from "@/components/home/AboutPreview";
 import FeaturedVideos from "@/components/home/FeaturedVideos";
 import GalleryPreview from "@/components/home/GalleryPreview";
 import BookingCTA from "@/components/home/BookingCTA";
+import StreamingPlatforms from "@/components/home/StreamingPlatforms";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export default async function Home() {
       />
 
       <FeaturedMusic />
+
+      <StreamingPlatforms />
 
       <FeaturedEvents />
 
