@@ -159,13 +159,41 @@ export default function MusicCatalogue({
               </div>
 
               {selectedAlbum && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedAlbumId(null)}
-                  className="rounded-full border border-[#0d1a17]/15 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] transition-colors hover:border-[#b18a3b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
-                >
-                  ← All Music
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Download all ${visibleSongs.length} songs from this album?`)) {
+                        visibleSongs.forEach((song, i) => {
+                          setTimeout(() => {
+                            const a = document.createElement("a");
+                            a.href = song.audioUrl;
+                            a.download = song.title || "song";
+                            a.target = "_blank";
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          }, i * 500);
+                        });
+                      }
+                    }}
+                    className="flex items-center gap-2 rounded-full bg-[#c9a24b] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#0d1a17] transition-colors hover:bg-[#b18a3b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download Album
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAlbumId(null)}
+                    className="rounded-full border border-[#0d1a17]/15 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] transition-colors hover:border-[#b18a3b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
+                  >
+                    ← All Music
+                  </button>
+                </div>
               )}
             </div>
 
@@ -212,8 +240,24 @@ export default function MusicCatalogue({
                       </span>
                     </div>
 
-                    <div className="mt-4 pl-12 sm:pl-13">
-                      <AudioPlayer audioUrl={song.audioUrl} title={song.title} />
+                    <div className="mt-4 pl-12 sm:pl-13 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <AudioPlayer audioUrl={song.audioUrl} title={song.title} />
+                      </div>
+                      <a
+                        href={song.audioUrl}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0d1a17]/5 text-[#0d1a17]/60 transition-colors hover:bg-[#0d1a17]/10 hover:text-[#0d1a17]"
+                        title={`Download ${song.title}`}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      </a>
                     </div>
                   </div>
                 ))

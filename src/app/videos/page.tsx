@@ -213,11 +213,12 @@ export default async function VideosPage() {
                         {video.source === "UPLOAD" ? (
                           <a
                             href={video.videoUrl}
+                            download
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex rounded-full border border-[#f2e9d8]/20 px-6 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[#f2e9d8] transition-colors hover:border-[#c9a24b] hover:text-[#c9a24b]"
+                            className="inline-flex rounded-full bg-[#f2e9d8]/10 px-6 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[#f2e9d8] transition-colors hover:bg-[#c9a24b] hover:text-[#0d1a17]"
                           >
-                            Open Video
+                            Download Video
                           </a>
                         ) : (
                           <a
