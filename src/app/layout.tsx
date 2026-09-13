@@ -13,30 +13,6 @@ export const metadata: Metadata = {
   title: "Jonathan - De Voice",
   description:
     "Official website of Ugandan soul singer Kigula Jonathan Sedrak, popularly known as De Voice and Da Diva.",
-  openGraph: {
-    title: "Jonathan - De Voice",
-    description:
-      "Official website of Ugandan soul singer Kigula Jonathan Sedrak, popularly known as De Voice and Da Diva.",
-    url: "https://jonathankigula.com",
-    siteName: "Jonathan - De Voice",
-    images: [
-      {
-        url: "https://jonathankigula.com/hero.jpeg",
-        width: 1200,
-        height: 630,
-        alt: "Jonathan Kigula - De Voice",
-      },
-    ],
-    locale: "en_US",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Jonathan - De Voice",
-    description:
-      "Official website of Ugandan soul singer Kigula Jonathan Sedrak, popularly known as De Voice and Da Diva.",
-    images: ["https://jonathankigula.com/hero.jpeg"],
-  },
 };
 
 export default function RootLayout({
