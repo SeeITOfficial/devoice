@@ -74,10 +74,10 @@ export default function Hero({ name, tagline, image }: HeroProps) {
               register.
             </p>
 
-            <div className="mt-10 flex w-full gap-4">
+            <div className="mt-10 flex w-full flex-col gap-4 sm:flex-row">
               <Link
                 href="/music"
-                className="group flex flex-1 items-center justify-center gap-3 rounded-full bg-[#f2e9d8] py-4 pl-4 pr-6 text-sm font-bold uppercase tracking-wide text-[#0d1a17] transition-transform hover:scale-[1.02]"
+                className="group flex flex-1 items-center justify-center gap-3 rounded-full bg-[#f2e9d8] py-4 px-6 text-sm font-bold uppercase tracking-wide text-[#0d1a17] transition-transform hover:scale-[1.02]"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0d1a17] text-[#f2e9d8]">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
