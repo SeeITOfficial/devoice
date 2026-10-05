@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
+import WhatsAppButton from "@/components/layout/WhatsAppButton";
 
 export default function SiteChrome({
   children,
@@ -20,6 +21,7 @@ export default function SiteChrome({
     <>
       <Navbar />
       <main className="flex-1">{children}</main>
+      <WhatsAppButton />
       <Footer />
     </>
   );

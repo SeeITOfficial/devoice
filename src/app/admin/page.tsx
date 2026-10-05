@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
@@ -36,25 +37,31 @@ export default async function AdminPage() {
         </p>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-[1.5rem] bg-[#0d1a17] p-7 text-[#f2e9d8]">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#f2e9d8]/40">
+          <Link
+            href="/admin/bookings"
+            className="group block rounded-[1.5rem] bg-[#0d1a17] p-7 text-[#f2e9d8] transition-colors hover:bg-[#162925] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-[#f2e9d8]/40 transition-colors group-hover:text-[#c9a24b]">
               Pending bookings
             </p>
 
             <p className="mt-5 font-serif text-5xl">
               {bookings}
             </p>
-          </div>
+          </Link>
 
-          <div className="rounded-[1.5rem] bg-[#0d1a17] p-7 text-[#f2e9d8]">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#f2e9d8]/40">
+          <Link
+            href="/admin/messages"
+            className="group block rounded-[1.5rem] bg-[#0d1a17] p-7 text-[#f2e9d8] transition-colors hover:bg-[#162925] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-[#f2e9d8]/40 transition-colors group-hover:text-[#c9a24b]">
               Unread messages
             </p>
 
             <p className="mt-5 font-serif text-5xl">
               {messages}
             </p>
-          </div>
+          </Link>
         </div>
       </div>
     </main>

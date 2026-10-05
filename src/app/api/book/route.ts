@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const service = await prisma.bookingService.findFirst({
+    let service = await prisma.bookingService.findFirst({
       where: {
         active: true,
       },
@@ -25,13 +25,13 @@ export async function POST(request: Request) {
     });
 
     if (!service) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "No booking service is currently available.",
+      service = await prisma.bookingService.create({
+        data: {
+          name: "Live Performance",
+          active: true,
+          sortOrder: 1,
         },
-        { status: 503 }
-      );
+      });
     }
 
     const booking = await prisma.booking.create({

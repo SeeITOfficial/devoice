@@ -78,7 +78,7 @@ export default async function MusicPage() {
           </p>
 
           <h1 className="mt-5 max-w-4xl font-serif text-6xl leading-[0.9] sm:text-7xl lg:text-8xl">
-            The Music
+            My Music
           </h1>
 
           <p className="mt-7 max-w-2xl text-base leading-7 text-[#0d1a17]/60 sm:text-lg">

@@ -55,10 +55,66 @@ export default function MusicCatalogue({
   songs,
 }: MusicCatalogueProps) {
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const selectedAlbum = albums.find((album) => album.id === selectedAlbumId);
   const visibleSongs = selectedAlbumId
     ? songs.filter((song) => song.album?.id === selectedAlbumId)
     : songs;
+
+  async function handleDownloadSong(
+    audioUrl: string,
+    title: string,
+    id?: string
+  ) {
+    if (id) setDownloadingId(id);
+    try {
+      const downloadEndpoint = `/api/music/download?url=${encodeURIComponent(
+        audioUrl
+      )}&title=${encodeURIComponent(title)}`;
+
+      const response = await fetch(downloadEndpoint);
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.style.display = "none";
+      link.href = blobUrl;
+
+      const extMatch = audioUrl.split("?")[0].match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i);
+      const ext = extMatch ? extMatch[1] : "mp3";
+      const safeTitle = title.replace(/[/\\?%*:|"<>]/g, "_").trim() || "song";
+      link.download = safeTitle.toLowerCase().endsWith(`.${ext.toLowerCase()}`)
+        ? safeTitle
+        : `${safeTitle}.${ext}`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 200);
+    } catch (error) {
+      console.error("Direct blob download error, triggering native download:", error);
+      const fallbackEndpoint = `/api/music/download?url=${encodeURIComponent(
+        audioUrl
+      )}&title=${encodeURIComponent(title)}`;
+      const link = document.createElement("a");
+      link.style.display = "none";
+      link.href = fallbackEndpoint;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 200);
+    } finally {
+      if (id) setDownloadingId(null);
+    }
+  }
 
   return (
     <>
@@ -80,7 +136,7 @@ export default function MusicCatalogue({
             </div>
 
             <div className="space-y-10">
-              {albums.map((album) => {
+              {albums.map((album, index) => {
                 const selected = album.id === selectedAlbumId;
 
                 return (
@@ -101,6 +157,7 @@ export default function MusicCatalogue({
                           src={album.artworkUrl as string}
                           alt={album.title}
                           fill
+                          priority={index === 0}
                           sizes="(max-width: 768px) 100vw, 360px"
                           className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                         />
@@ -162,19 +219,12 @@ export default function MusicCatalogue({
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (window.confirm(`Download all ${visibleSongs.length} songs from this album?`)) {
-                        visibleSongs.forEach((song, i) => {
-                          setTimeout(() => {
-                            const a = document.createElement("a");
-                            a.href = song.audioUrl;
-                            a.download = song.title || "song";
-                            a.target = "_blank";
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                          }, i * 500);
-                        });
+                        for (const song of visibleSongs) {
+                          await handleDownloadSong(song.audioUrl, song.title, song.id);
+                          await new Promise((resolve) => setTimeout(resolve, 500));
+                        }
                       }
                     }}
                     className="flex items-center gap-2 rounded-full bg-[#c9a24b] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#0d1a17] transition-colors hover:bg-[#b18a3b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b18a3b]"
@@ -244,20 +294,52 @@ export default function MusicCatalogue({
                       <div className="flex-1 min-w-0">
                         <AudioPlayer audioUrl={song.audioUrl} title={song.title} />
                       </div>
-                      <a
-                        href={song.audioUrl}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0d1a17]/5 text-[#0d1a17]/60 transition-colors hover:bg-[#0d1a17]/10 hover:text-[#0d1a17]"
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadSong(song.audioUrl, song.title, song.id)}
+                        disabled={downloadingId === song.id}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0d1a17]/5 text-[#0d1a17]/60 transition-colors hover:bg-[#0d1a17]/10 hover:text-[#0d1a17] disabled:opacity-60"
                         title={`Download ${song.title}`}
+                        aria-label={`Download ${song.title}`}
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                      </a>
+                        {downloadingId === song.id ? (
+                          <svg
+                            className="h-4 w-4 animate-spin text-[#b18a3b]"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8H4z"
+                            ></path>
+                          </svg>
+                        ) : (
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        )}
+                      </button>
                     </div>
                   </div>
                 ))

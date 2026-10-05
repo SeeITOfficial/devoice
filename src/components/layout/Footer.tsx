@@ -54,6 +54,15 @@ export default function Footer() {
             </p>
 
             <div className="space-y-3 text-sm text-[#f2e9d8]/60">
+              <a
+                href="https://wa.me/256703008952?text=Hello%2C%20I%20am%20reaching%20out%20to%20De%20Voice%20Management%20regarding%20an%20inquiry%20for%20Jonathan%20(De%20Voice)."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block transition-colors hover:text-[#f2e9d8]"
+              >
+                WhatsApp Management
+              </a>
+
               <Link
                 href="/contact"
                 className="block transition-colors hover:text-[#f2e9d8]"
