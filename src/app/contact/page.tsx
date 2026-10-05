@@ -125,9 +125,12 @@ export default function ContactPage() {
                   Email
                 </p>
 
-                <p className="mt-2 text-sm text-[#f2e9d8]/70">
-                  management@devoice.com
-                </p>
+                <a
+                  href="mailto:management@jonathankigula.com"
+                  className="mt-2 block text-sm text-[#f2e9d8]/70 transition-colors hover:text-[#c9a24b]"
+                >
+                  management@jonathankigula.com
+                </a>
               </div>
 
               <div>

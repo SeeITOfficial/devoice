@@ -59,11 +59,11 @@ On 3 June 2026, he officially released his debut album, De Voice My Soul.`,
 
   await prisma.managementUser.upsert({
     where: {
-      email: "management@devoice.com",
+      email: "management@jonathankigula.com",
     },
     update: {},
     create: {
-      email: "management@devoice.com",
+      email: "management@jonathankigula.com",
       passwordHash: hashPassword("DeVoice@2026"),
     },
   });
